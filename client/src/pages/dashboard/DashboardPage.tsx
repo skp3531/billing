@@ -8,7 +8,7 @@ import { getTables } from '../../api/table.api';
 import { getRawMaterials } from '../../api/inventory.api';
 
 const DashboardPage = () => {
-  const { user, currentOutlet, organization } = useAuthStore();
+  const { user, currentOutlet, organization, hasPermission } = useAuthStore();
   const isTablesEnabled = organization?.modulesEnabled?.tables !== false;
   const isKitchenEnabled = organization?.modulesEnabled?.kitchen !== false;
   const [metrics, setMetrics] = useState({ todayRevenue: 0, todayOrders: 0 });
@@ -114,10 +114,10 @@ const DashboardPage = () => {
       
       <h2 className="text-lg font-bold text-gray-900 mb-4">Quick Actions</h2>
       <div className="flex flex-wrap gap-4">
-         <Link to="/pos" className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded shadow block">New Order</Link>
-         <Link to="/orders" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">View Orders</Link>
-         <Link to="/menu" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">Menu</Link>
-         {isKitchenEnabled && <Link to="/kitchen" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">Kitchen</Link>}
+         {hasPermission('pos.view') && <Link to="/pos" className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded shadow block">New Order</Link>}
+         {hasPermission('orders.view') && <Link to="/orders" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">View Orders</Link>}
+         {hasPermission('menu.view') && <Link to="/menu" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">Menu</Link>}
+         {isKitchenEnabled && hasPermission('kitchen.view') && <Link to="/kitchen" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-4 py-2 rounded shadow block">Kitchen</Link>}
       </div>
     </div>
   );

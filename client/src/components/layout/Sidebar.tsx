@@ -10,25 +10,25 @@ import {
 } from '@heroicons/react/24/outline';
 
 const navItems = [
-  { name: 'Dashboard', path: '/dashboard', icon: HomeIcon },
-  { name: 'POS', path: '/pos', icon: ShoppingCartIcon },
-  { name: 'Orders', path: '/orders', icon: ClipboardDocumentListIcon },
-  { name: 'Tables', path: '/tables', icon: RectangleGroupIcon },
-  { name: 'Kitchen', path: '/kitchen', icon: FireIcon },
-  { name: 'Menu', path: '/menu', icon: BookOpenIcon },
-  { name: 'Inventory', path: '/inventory', icon: ArchiveBoxIcon },
-  { name: 'Purchases', path: '/purchases', icon: TruckIcon },
-  { name: 'Suppliers', path: '/suppliers', icon: BuildingStorefrontIcon },
-  { name: 'Customers', path: '/customers', icon: UsersIcon },
-  { name: 'Staff', path: '/staff', icon: UserGroupIcon },
-  { name: 'Expenses', path: '/expenses', icon: CreditCardIcon },
-  { name: 'Reports', path: '/reports', icon: ChartBarIcon },
-  { name: 'Settings', path: '/settings', icon: CogIcon },
+  { name: 'Dashboard', path: '/dashboard', icon: HomeIcon, permission: 'dashboard.view' },
+  { name: 'POS', path: '/pos', icon: ShoppingCartIcon, permission: 'pos.view' },
+  { name: 'Orders', path: '/orders', icon: ClipboardDocumentListIcon, permission: 'orders.view' },
+  { name: 'Tables', path: '/tables', icon: RectangleGroupIcon, permission: 'pos.view' },
+  { name: 'Kitchen', path: '/kitchen', icon: FireIcon, permission: 'kitchen.view' },
+  { name: 'Menu', path: '/menu', icon: BookOpenIcon, permission: 'menu.view' },
+  { name: 'Inventory', path: '/inventory', icon: ArchiveBoxIcon, permission: 'inventory.view' },
+  { name: 'Purchases', path: '/purchases', icon: TruckIcon, permission: 'purchases.view' },
+  { name: 'Suppliers', path: '/suppliers', icon: BuildingStorefrontIcon, permission: 'suppliers.view' },
+  { name: 'Customers', path: '/customers', icon: UsersIcon, permission: 'customers.view' },
+  { name: 'Staff', path: '/staff', icon: UserGroupIcon, permission: 'staff.view' },
+  { name: 'Expenses', path: '/expenses', icon: CreditCardIcon, permission: 'expenses.view' },
+  { name: 'Reports', path: '/reports', icon: ChartBarIcon, permission: 'reports.view' },
+  { name: 'Settings', path: '/settings', icon: CogIcon, permission: 'settings.view' },
 ];
 
 const Sidebar = () => {
   const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
-  const { user, organization } = useAuthStore();
+  const { user, organization, hasPermission } = useAuthStore();
 
   const isTablesEnabled = organization?.modulesEnabled?.tables !== false;
   const isKitchenEnabled = organization?.modulesEnabled?.kitchen !== false;
@@ -36,6 +36,7 @@ const Sidebar = () => {
   const visibleNavItems = navItems.filter(item => {
     if (item.name === 'Tables' && !isTablesEnabled) return false;
     if (item.name === 'Kitchen' && !isKitchenEnabled) return false;
+    if (item.permission && !hasPermission(item.permission)) return false;
     return true;
   });
 
