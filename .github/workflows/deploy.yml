@@ -31,7 +31,7 @@ jobs:
         working-directory: client
 
       - name: Build
-        run: npm run build
+        run: npm run build -- --base=/billing/
         working-directory: client
         env:
           VITE_API_URL: https://billing-dpvs.onrender.com/api
