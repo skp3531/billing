@@ -1,9 +1,12 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore';
 
+const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5001/api',
+  baseURL: BASE_URL,
   withCredentials: true,
+  timeout: 65000, // 65s timeout so Render free tier has time to wake up
 });
 
 api.interceptors.request.use((config) => {
@@ -22,9 +25,9 @@ api.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const res = await axios.post(
-          `${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/auth/refresh`,
+          `${BASE_URL}/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true, timeout: 65000 }
         );
         const { accessToken } = res.data.data;
         useAuthStore.getState().setAccessToken(accessToken);
