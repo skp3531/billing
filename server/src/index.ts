@@ -11,7 +11,13 @@ import routes from './routes';
 const app = express();
 
 app.use(helmet());
-app.use(cors({ origin: env.CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow any origin reflecting it back so credentials work with Vercel & local
+    callback(null, true);
+  },
+  credentials: true
+}));
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(cookieParser());
