@@ -122,7 +122,7 @@ const OrdersPage = () => {
                   No active orders right now.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
                   {activeOrders.map(order => (
                     <div 
                       key={order._id}
@@ -195,8 +195,8 @@ const OrdersPage = () => {
                   No past orders.
                 </div>
               ) : (
-                <div className="bg-white border rounded-xl overflow-hidden">
-                  <table className="w-full text-left text-sm">
+                <div className="bg-white border rounded-xl overflow-x-auto shadow-sm">
+                  <table className="min-w-[640px] w-full text-left text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
                         <th className="px-4 py-3 font-semibold text-gray-700">Order #</th>

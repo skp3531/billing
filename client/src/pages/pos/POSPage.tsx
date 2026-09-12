@@ -41,6 +41,7 @@ const POSPage = () => {
   
   // Checkout Modal
   const [showCheckout, setShowCheckout] = useState(false);
+  const [showMobileCart, setShowMobileCart] = useState(false);
   const [orderType, setOrderType] = useState<OrderType>('takeaway');
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cash');
   const [customerName, setCustomerName] = useState('');
@@ -280,28 +281,28 @@ const POSPage = () => {
 
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex flex-col lg:flex-row relative overflow-hidden">
       {/* Left Pane - POS */}
-      <div className="w-2/3 flex flex-col bg-[#fcfaf7] h-full border-r">
+      <div className="w-full lg:w-2/3 flex flex-col bg-[#fcfaf7] h-full border-r overflow-hidden">
         
         {/* Search Bar */}
-        <div className="p-6 pb-2">
+        <div className="p-3 sm:p-6 pb-1 sm:pb-2 shrink-0">
           <input 
             type="text" 
             placeholder="Search menu..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full md:w-1/2 px-5 py-3 rounded-full border border-gray-200 focus:border-[#ec6247] focus:ring-1 focus:ring-[#ec6247] shadow-sm text-sm"
+            className="w-full sm:w-80 px-4 py-2 sm:py-2.5 rounded-full border border-gray-200 focus:border-[#ec6247] focus:ring-1 focus:ring-[#ec6247] shadow-sm text-xs sm:text-sm"
           />
         </div>
 
         {/* Categories Strip */}
-        <div className="px-6 py-4 flex gap-3 overflow-x-auto hide-scrollbar mb-2">
+        <div className="px-3 sm:px-6 py-2 sm:py-3 flex gap-2 sm:gap-3 overflow-x-auto hide-scrollbar shrink-0">
           {categories.map(cat => (
             <button
               key={cat._id}
               onClick={() => setSelectedCategoryId(cat._id)}
-              className={`px-6 py-2.5 rounded-full font-semibold whitespace-nowrap transition-all border ${selectedCategoryId === cat._id ? 'bg-[#ec6247] text-white border-[#ec6247] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:shadow-sm'}`}
+              className={`px-3.5 sm:px-5 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold rounded-full whitespace-nowrap transition-all border ${selectedCategoryId === cat._id ? 'bg-[#ec6247] text-white border-[#ec6247] shadow-sm' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-300 hover:shadow-sm'}`}
             >
               {cat.name}
             </button>
@@ -309,23 +310,23 @@ const POSPage = () => {
         </div>
 
         {/* Menu Items Grid */}
-        <div className="flex-1 overflow-y-auto p-6 bg-transparent">
+        <div className={`flex-1 overflow-y-auto p-3 sm:p-6 bg-transparent ${cart.length > 0 ? 'pb-24 lg:pb-6' : ''}`}>
           {loading ? (
             <div className="flex justify-center p-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#ec6247]" /></div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-4">
               {filteredMenuItems.map(item => (
                 <button
                   key={item._id}
                   onClick={() => handleItemClick(item)}
-                  className="bg-white p-5 rounded-3xl border border-gray-100 hover:shadow-md hover:border-gray-300 transition-all flex flex-col text-left h-full relative overflow-hidden"
+                  className="bg-white p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border border-gray-100 hover:shadow-md hover:border-gray-300 transition-all flex flex-col text-left h-full relative overflow-hidden active:scale-98"
                 >
                   <div className="absolute top-0 right-0 w-24 h-24 bg-orange-50/60 rounded-bl-full -z-10"></div>
-                  <div className="w-10 h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-4 text-emerald-600">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-50 rounded-full flex items-center justify-center mb-2 sm:mb-4 text-emerald-600 shrink-0">
                     <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                   </div>
                   <div className="flex-1 z-10">
-                    <h3 className="font-bold text-gray-900 leading-tight">{item.name}</h3>
+                    <h3 className="text-xs sm:text-sm font-bold text-gray-900 leading-tight line-clamp-2">{item.name}</h3>
                     <p className="text-xs text-gray-500 mt-1 uppercase tracking-wide">{typeof item.categoryId === 'object' ? (item.categoryId as any).name : 'Item'}</p>
                   </div>
                   <div className="mt-4 flex justify-between items-end w-full z-10">
@@ -339,8 +340,8 @@ const POSPage = () => {
         </div>
       </div>
 
-      {/* Right Pane - Cart */}
-      <div className="w-1/3 flex flex-col bg-white h-full">
+      {/* Right Pane - Cart (Desktop) */}
+      <div className="hidden lg:flex lg:w-1/3 flex-col bg-white h-full border-l shrink-0">
         <div className="p-4 border-b bg-gray-50 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">Current Order</h2>
           <span className="bg-amber-100 text-amber-800 text-xs font-bold px-2 py-1 rounded-full">{cart.length} Items</span>
@@ -406,10 +407,122 @@ const POSPage = () => {
         </div>
       </div>
 
+      
+      {/* Floating Mobile Cart Bar */}
+      {cart.length > 0 && (
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl z-30 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">
+              {cart.length} item{cart.length > 1 ? 's' : ''}
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider">Total</p>
+              <p className="text-sm font-bold text-gray-900">₹{grandTotal.toFixed(2)}</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setShowMobileCart(true)}
+            className="bg-[#2d5145] hover:bg-[#203a31] active:scale-95 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-md flex items-center gap-2 transition-transform"
+          >
+            <span>View Order</span>
+            <span>🛒</span>
+          </button>
+        </div>
+      )}
+
+      {/* Mobile Cart Sheet Drawer */}
+      {showMobileCart && (
+        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/50 backdrop-blur-xs">
+          <div className="bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
+            {/* Header */}
+            <div className="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
+              <div>
+                <h3 className="text-lg font-bold text-gray-900">Current Order</h3>
+                <p className="text-xs text-gray-500">{cart.length} item{cart.length > 1 ? 's' : ''} in cart</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button 
+                  onClick={() => { setCart([]); setShowMobileCart(false); }} 
+                  className="text-xs text-red-500 font-medium px-2 py-1 rounded hover:bg-red-50"
+                >
+                  Clear all
+                </button>
+                <button 
+                  onClick={() => setShowMobileCart(false)} 
+                  className="p-1.5 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-200"
+                >
+                  <XMarkIcon className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Cart Items List */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {cart.map(item => (
+                <div key={item.cartItemId} className="border rounded-xl p-3 flex flex-col gap-2 bg-gray-50/50">
+                  <div className="flex justify-between items-start">
+                    <div className="pr-2">
+                      <h4 className="font-semibold text-gray-900 text-sm">{item.menuItem.name}</h4>
+                      {item.variant && <p className="text-xs text-gray-500">{item.variant.name}</p>}
+                      {item.modifiers.map(m => (
+                        <p key={m.name} className="text-xs text-gray-400">+ {m.name}</p>
+                      ))}
+                    </div>
+                    <span className="font-bold text-sm text-gray-900">₹{item.subtotal}</span>
+                  </div>
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="flex items-center gap-2.5 bg-white border rounded-lg px-2 py-1 shadow-xs">
+                      <button onClick={() => updateQuantity(item.cartItemId, -1)} className="text-gray-500 hover:text-amber-600 p-0.5">
+                        <MinusIcon className="w-3.5 h-3.5" />
+                      </button>
+                      <span className="font-bold text-xs w-4 text-center">{item.quantity}</span>
+                      <button onClick={() => updateQuantity(item.cartItemId, 1)} className="text-gray-500 hover:text-amber-600 p-0.5">
+                        <PlusIcon className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    <button onClick={() => removeCartItem(item.cartItemId)} className="text-red-400 hover:text-red-600 p-1">
+                      <TrashIcon className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Totals & Checkout Button */}
+            <div className="p-4 border-t bg-gray-50 shrink-0 space-y-3">
+              <div className="space-y-1.5 text-xs text-gray-600">
+                <div className="flex justify-between">
+                  <span>Subtotal</span>
+                  <span>₹{subtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Tax (5%)</span>
+                  <span>₹{tax.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-base font-bold text-gray-900 pt-1.5 border-t">
+                  <span>Total</span>
+                  <span>₹{grandTotal.toFixed(2)}</span>
+                </div>
+              </div>
+              <button
+                disabled={cart.length === 0}
+                onClick={() => {
+                  setShowMobileCart(false);
+                  setShowCheckout(true);
+                }}
+                className="w-full bg-[#2d5145] hover:bg-[#203a31] active:scale-98 disabled:bg-gray-300 text-white font-bold text-base py-3.5 rounded-xl shadow-lg transition-transform"
+              >
+                Proceed to Checkout
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Item Config Modal */}
       {configuringItem && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-md max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl w-full max-w-md mx-3 sm:mx-auto max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-900">{configuringItem.name}</h3>
               <button onClick={() => setConfiguringItem(null)} className="text-gray-400 hover:text-gray-600">
@@ -473,7 +586,7 @@ const POSPage = () => {
       {/* Checkout Modal */}
       {showCheckout && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-2xl w-full max-w-lg overflow-hidden flex flex-col">
+          <div className="bg-white rounded-2xl w-full max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-900">Checkout</h3>
               <button onClick={() => setShowCheckout(false)} className="text-gray-400 hover:text-gray-600">

@@ -9,7 +9,7 @@ interface AppState {
 
 export const useAppStore = create<AppState>((set) => ({
   isLoading: false,
-  sidebarCollapsed: false,
+  sidebarCollapsed: typeof window !== 'undefined' ? window.innerWidth < 768 : false,
   setSidebarCollapsed: (v) => set({ sidebarCollapsed: v }),
   setLoading: (v) => set({ isLoading: v }),
 }));

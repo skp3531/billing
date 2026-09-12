@@ -6,7 +6,7 @@ import { clsx } from 'clsx';
 import { 
   HomeIcon, ShoppingCartIcon, ClipboardDocumentListIcon, RectangleGroupIcon, 
   FireIcon, BookOpenIcon, ArchiveBoxIcon, TruckIcon, BuildingStorefrontIcon, 
-  UsersIcon, UserGroupIcon, CreditCardIcon, ChartBarIcon, CogIcon 
+  UsersIcon, UserGroupIcon, CreditCardIcon, ChartBarIcon, CogIcon, XMarkIcon 
 } from '@heroicons/react/24/outline';
 
 const navItems = [
@@ -27,10 +27,9 @@ const navItems = [
 ];
 
 const Sidebar = () => {
-  const { sidebarCollapsed } = useAppStore();
+  const { sidebarCollapsed, setSidebarCollapsed } = useAppStore();
   const { user, organization } = useAuthStore();
 
-  
   const isTablesEnabled = organization?.modulesEnabled?.tables !== false;
   const isKitchenEnabled = organization?.modulesEnabled?.kitchen !== false;
 
@@ -40,49 +39,90 @@ const Sidebar = () => {
     return true;
   });
 
+  const handleNavClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setSidebarCollapsed(true);
+    }
+  };
+
   return (
-    <aside className={clsx(
-      "bg-gray-900 text-white flex flex-col transition-all duration-300",
-      sidebarCollapsed ? "w-0 overflow-hidden md:w-16" : "w-64"
-    )}>
-      <div className="h-16 flex items-center justify-center border-b border-gray-800">
-        <BuildingStorefrontIcon className="h-8 w-8 text-amber-500" />
-        {!sidebarCollapsed && <span className="ml-2 text-xl font-bold">RestoPOS</span>}
-      </div>
-      
-      <nav className="flex-1 overflow-y-auto py-4">
-        <ul className="space-y-1 px-2">
-          {visibleNavItems.map((item) => (
-            <li key={item.name}>
-              <NavLink
-                to={item.path}
-                className={({ isActive }) => clsx(
-                  "flex items-center px-2 py-2 rounded-md group transition-colors",
-                  isActive ? "bg-amber-600 text-white" : "text-gray-300 hover:bg-gray-800 hover:text-white",
-                  sidebarCollapsed ? "justify-center" : "justify-start"
-                )}
-                title={sidebarCollapsed ? item.name : undefined}
-              >
-                <item.icon className="h-6 w-6 shrink-0" />
-                {!sidebarCollapsed && <span className="ml-3 truncate">{item.name}</span>}
-              </NavLink>
-            </li>
-          ))}
-        </ul>
-      </nav>
-      
-      <div className="p-4 border-t border-gray-800 flex items-center">
-        <div className="h-8 w-8 rounded-full bg-gray-700 flex items-center justify-center shrink-0">
-          <span className="text-sm font-medium">{user?.name?.charAt(0) || 'U'}</span>
-        </div>
-        {!sidebarCollapsed && (
-          <div className="ml-3 truncate">
-            <p className="text-sm font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-gray-400 truncate">{user?.roleName}</p>
+    <>
+      {/* Mobile Backdrop */}
+      {!sidebarCollapsed && (
+        <div 
+          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-xs transition-opacity"
+          onClick={() => setSidebarCollapsed(true)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar Aside */}
+      <aside className={clsx(
+        "bg-gray-900 text-white flex flex-col transition-all duration-300 z-50",
+        // Mobile styles: fixed drawer
+        "fixed inset-y-0 left-0 shadow-2xl md:shadow-none",
+        sidebarCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "translate-x-0 w-64 md:relative",
+        // Desktop styles: in layout flow
+        "md:flex md:static shrink-0"
+      )}>
+        {/* Header with Logo & Close Button for Mobile */}
+        <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
+          <div className="flex items-center space-x-2">
+            <BuildingStorefrontIcon className="h-8 w-8 text-amber-500 shrink-0" />
+            {(!sidebarCollapsed || (typeof window !== 'undefined' && window.innerWidth < 768)) && (
+              <span className="text-xl font-bold tracking-tight">RestoPOS</span>
+            )}
           </div>
-        )}
-      </div>
-    </aside>
+          <button
+            onClick={() => setSidebarCollapsed(true)}
+            className="md:hidden text-gray-400 hover:text-white p-1 rounded-lg hover:bg-gray-800"
+            aria-label="Close menu"
+          >
+            <XMarkIcon className="h-6 w-6" />
+          </button>
+        </div>
+        
+        {/* Navigation items */}
+        <nav className="flex-1 overflow-y-auto py-3">
+          <ul className="space-y-1 px-2">
+            {visibleNavItems.map((item) => (
+              <li key={item.name}>
+                <NavLink
+                  to={item.path}
+                  onClick={handleNavClick}
+                  className={({ isActive }) => clsx(
+                    "flex items-center px-3 py-2.5 rounded-xl font-medium text-sm transition-all",
+                    isActive 
+                      ? "bg-amber-600 text-white shadow-md font-semibold" 
+                      : "text-gray-300 hover:bg-gray-800 hover:text-white",
+                    sidebarCollapsed ? "md:justify-center" : "justify-start"
+                  )}
+                  title={sidebarCollapsed ? item.name : undefined}
+                >
+                  <item.icon className="h-5 w-5 shrink-0" />
+                  {(!sidebarCollapsed || (typeof window !== 'undefined' && window.innerWidth < 768)) && (
+                    <span className="ml-3 truncate">{item.name}</span>
+                  )}
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        
+        {/* User profile footer */}
+        <div className="p-3 border-t border-gray-800 flex items-center">
+          <div className="h-9 w-9 rounded-full bg-amber-600/30 text-amber-400 flex items-center justify-center font-bold text-sm shrink-0">
+            {user?.name?.charAt(0) || 'U'}
+          </div>
+          {(!sidebarCollapsed || (typeof window !== 'undefined' && window.innerWidth < 768)) && (
+            <div className="ml-3 truncate min-w-0">
+              <p className="text-sm font-semibold truncate text-gray-100">{user?.name}</p>
+              <p className="text-xs text-gray-400 truncate capitalize">{user?.roleName || 'Staff'}</p>
+            </div>
+          )}
+        </div>
+      </aside>
+    </>
   );
 };
 

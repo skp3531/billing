@@ -132,9 +132,9 @@ const MenuPage = () => {
         </div>
       </div>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0">
         {/* Left Pane - Categories */}
-        <div className="w-1/4 min-w-[250px] bg-gray-50 border-r flex flex-col h-full">
+        <div className="w-full md:w-1/4 md:min-w-[250px] bg-gray-50 border-b md:border-b-0 md:border-r flex flex-col max-h-44 md:max-h-none md:h-full shrink-0">
           <div className="p-4 flex justify-between items-center border-b bg-gray-100">
             <h2 className="font-semibold text-gray-700">Categories</h2>
             <button
