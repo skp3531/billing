@@ -6,6 +6,7 @@ import { useAuthStore } from '../../store/authStore';
 import { Organization } from '../../types';
 import { BuildingOffice2Icon, MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import PrinterSettingsTab from './PrinterSettingsTab';
+import { navItems } from '../../components/layout/Sidebar';
 
 type Tab = 'organization' | 'outlets' | 'roles' | 'printers' | 'modules' | 'apps';
 
@@ -120,20 +121,14 @@ const SettingsPage = () => {
     { id: 'modules', label: 'Modules & Print' },
   ];
 
-  const appLinks = [
-    { name: 'Dashboard', path: '/dashboard', icon: BuildingOffice2Icon },
-    { name: 'Orders', path: '/orders', icon: BuildingOffice2Icon },
-    { name: 'Tables', path: '/tables', icon: BuildingOffice2Icon },
-    { name: 'Kitchen', path: '/kitchen', icon: BuildingOffice2Icon },
-    { name: 'Menu', path: '/menu', icon: BuildingOffice2Icon },
-    { name: 'Inventory', path: '/inventory', icon: BuildingOffice2Icon },
-    { name: 'Purchases', path: '/purchases', icon: BuildingOffice2Icon },
-    { name: 'Suppliers', path: '/suppliers', icon: BuildingOffice2Icon },
-    { name: 'Customers', path: '/customers', icon: BuildingOffice2Icon },
-    { name: 'Staff', path: '/staff', icon: BuildingOffice2Icon },
-    { name: 'Expenses', path: '/expenses', icon: BuildingOffice2Icon },
-    { name: 'Reports', path: '/reports', icon: BuildingOffice2Icon },
-  ];
+  const { hasPermission } = useAuthStore();
+  const visibleApps = navItems.filter(item => {
+    if (item.name === 'Settings') return false;
+    if (item.name === 'Tables' && !modulesEnabled.tables) return false;
+    if (item.name === 'Kitchen' && !modulesEnabled.kitchen) return false;
+    if (item.permission && !hasPermission(item.permission)) return false;
+    return true;
+  });
 
   return (
     <div className="p-6">
@@ -161,7 +156,7 @@ const SettingsPage = () => {
 
       {activeTab === 'apps' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {appLinks.map(app => (
+          {visibleApps.map(app => (
             <Link key={app.name} to={app.path} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-500 transition-all group">
               <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:bg-amber-100 transition-colors">
                 <app.icon className="w-6 h-6" />

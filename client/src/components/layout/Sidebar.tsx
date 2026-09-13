@@ -9,7 +9,7 @@ import {
   UsersIcon, UserGroupIcon, CreditCardIcon, ChartBarIcon, CogIcon, XMarkIcon 
 } from '@heroicons/react/24/outline';
 
-const navItems = [
+export const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: HomeIcon, permission: 'dashboard.view' },
   { name: 'POS', path: '/pos', icon: ShoppingCartIcon, permission: 'pos.view' },
   { name: 'Orders', path: '/orders', icon: ClipboardDocumentListIcon, permission: 'orders.view' },

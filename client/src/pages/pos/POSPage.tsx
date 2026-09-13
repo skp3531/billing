@@ -410,7 +410,7 @@ const POSPage = () => {
       
       {/* Floating Mobile Cart Bar */}
       {cart.length > 0 && (
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl z-30 flex items-center justify-between">
+        <div className="lg:hidden fixed bottom-16 left-0 right-0 p-3 bg-white/95 backdrop-blur-md border-t border-gray-200 shadow-2xl z-30 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <div className="bg-amber-100 text-amber-900 text-xs font-bold px-2.5 py-1 rounded-full">
               {cart.length} item{cart.length > 1 ? 's' : ''}
