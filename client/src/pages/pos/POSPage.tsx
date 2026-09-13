@@ -746,19 +746,19 @@ const POSPage = () => {
                   <svg className="w-6 h-6 text-orange-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
                 </div>
                 <h4 className="font-bold text-lg">{organization?.name || 'Store'}</h4>
-                <p className="text-xs text-gray-400 uppercase tracking-widest">{completedOrder.type.replace('_', ' ')} RECEIPT</p>
+                <p className="text-xs text-gray-400 uppercase tracking-widest">{String(completedOrder.orderType || completedOrder.type || 'ORDER').replace('_', ' ')} RECEIPT</p>
               </div>
 
               <div className="flex justify-between text-sm text-gray-500 mb-6 border-b pb-4">
-                <span>Order #{completedOrder.orderNumber}</span>
-                <span>{new Date(completedOrder.createdAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                <span>Order #{completedOrder.orderNumber || 'PENDING'}</span>
+                <span>{new Date(completedOrder.createdAt || new Date()).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
               </div>
 
               <div className="space-y-3 mb-6">
                 {completedOrder.items.map((item, idx) => (
                   <div key={idx} className="flex justify-between text-gray-800 text-sm">
                     <span>{item.quantity} × {item.name}</span>
-                    <span className="font-medium">₹{(item.subtotal || 0).toFixed(2)}</span>
+                    <span className="font-medium">₹{(item.itemTotal || item.subtotal || 0).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
@@ -766,15 +766,15 @@ const POSPage = () => {
               <div className="border-t pt-4 space-y-2 mb-6">
                 <div className="flex justify-between text-gray-500 text-sm">
                   <span>Subtotal</span>
-                  <span>₹{completedOrder.subtotal.toFixed(2)}</span>
+                  <span>₹{(completedOrder.subtotal || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-gray-500 text-sm">
                   <span>Tax</span>
-                  <span>₹{completedOrder.taxTotal.toFixed(2)}</span>
+                  <span>₹{(completedOrder.taxTotal || 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between text-xl font-bold text-gray-900 border-t border-dashed pt-4 mt-2">
                   <span>Total</span>
-                  <span>₹{completedOrder.grandTotal.toFixed(2)}</span>
+                  <span>₹{(completedOrder.grandTotal || 0).toFixed(2)}</span>
                 </div>
               </div>
 
