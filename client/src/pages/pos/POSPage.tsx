@@ -263,7 +263,7 @@ const POSPage = () => {
         taxTotal: tax,
         discountTotal: 0,
         grandTotal,
-        status: 'PENDING',
+        status: isKitchenEnabled ? 'PENDING' : 'COMPLETED',
         paymentStatus: paymentMethod === 'cash' ? 'PAID' : 'UNPAID'
       });
       toast.success('Order placed successfully!');
