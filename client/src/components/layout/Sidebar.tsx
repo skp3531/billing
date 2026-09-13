@@ -47,24 +47,12 @@ const Sidebar = () => {
   };
 
   return (
-    <>
-      {/* Mobile Backdrop */}
-      {!sidebarCollapsed && (
-        <div 
-          className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-xs transition-opacity"
-          onClick={() => setSidebarCollapsed(true)}
-          aria-hidden="true"
-        />
-      )}
-
       {/* Sidebar Aside */}
       <aside className={clsx(
-        "bg-gray-900 text-white flex flex-col transition-all duration-300 z-50",
-        // Mobile styles: fixed drawer
-        "fixed inset-y-0 left-0 shadow-2xl md:shadow-none",
-        sidebarCollapsed ? "-translate-x-full md:translate-x-0 md:w-16" : "translate-x-0 w-64 md:relative",
-        // Desktop styles: in layout flow
-        "md:flex md:static shrink-0"
+        "bg-gray-900 text-white transition-all duration-300 z-50",
+        // Hidden on mobile, only flex on desktop
+        "hidden md:flex md:flex-col md:static shrink-0",
+        sidebarCollapsed ? "md:w-16" : "w-64"
       )}>
         {/* Header with Logo & Close Button for Mobile */}
         <div className="h-16 flex items-center justify-between px-4 border-b border-gray-800">
@@ -123,7 +111,6 @@ const Sidebar = () => {
           )}
         </div>
       </aside>
-    </>
   );
 };
 

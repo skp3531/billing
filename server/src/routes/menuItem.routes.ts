@@ -13,8 +13,8 @@ router.use(authenticate);
 router.get('/csv/template', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(downloadCsvTemplate));
 router.post('/csv/import', requirePermission(PERMISSIONS.MENU_MANAGE), uploadCSV.single('file'), asyncHandler(importCsv));
 
-router.get('/', requirePermission(PERMISSIONS.MENU_VIEW), asyncHandler(getMenuItems));
-router.get('/:id', requirePermission(PERMISSIONS.MENU_VIEW), asyncHandler(getMenuItem));
+router.get('/', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItems));
+router.get('/:id', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItem));
 router.post('/', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(createMenuItem));
 router.put('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(updateMenuItem));
 router.delete('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(deleteMenuItem));

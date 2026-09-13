@@ -112,6 +112,7 @@ const SettingsPage = () => {
     setForm(f => ({ ...f, address: { ...f.address, [field]: value } }));
 
   const tabs: { id: Tab; label: string }[] = [
+    { id: 'apps', label: 'All Apps' },
     { id: 'organization', label: 'Organization' },
     { id: 'outlets', label: 'Outlets' },
     { id: 'roles', label: 'Roles & Permissions' },
@@ -119,21 +120,35 @@ const SettingsPage = () => {
     { id: 'modules', label: 'Modules & Print' },
   ];
 
+  const appLinks = [
+    { name: 'Dashboard', path: '/dashboard', icon: BuildingOffice2Icon },
+    { name: 'Orders', path: '/orders', icon: BuildingOffice2Icon },
+    { name: 'Tables', path: '/tables', icon: BuildingOffice2Icon },
+    { name: 'Kitchen', path: '/kitchen', icon: BuildingOffice2Icon },
+    { name: 'Menu', path: '/menu', icon: BuildingOffice2Icon },
+    { name: 'Inventory', path: '/inventory', icon: BuildingOffice2Icon },
+    { name: 'Purchases', path: '/purchases', icon: BuildingOffice2Icon },
+    { name: 'Suppliers', path: '/suppliers', icon: BuildingOffice2Icon },
+    { name: 'Customers', path: '/customers', icon: BuildingOffice2Icon },
+    { name: 'Staff', path: '/staff', icon: BuildingOffice2Icon },
+    { name: 'Expenses', path: '/expenses', icon: BuildingOffice2Icon },
+    { name: 'Reports', path: '/reports', icon: BuildingOffice2Icon },
+  ];
 
   return (
     <div className="p-6">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings</h1>
-        <p className="text-gray-500 text-sm mt-1">Configure your restaurant and system settings</p>
+        <h1 className="text-2xl font-bold text-gray-900">Settings & Apps</h1>
+        <p className="text-gray-500 text-sm mt-1">Configure your restaurant or access all modules</p>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto hide-scrollbar">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
               activeTab === tab.id
                 ? 'border-amber-500 text-amber-600'
                 : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
@@ -143,6 +158,19 @@ const SettingsPage = () => {
           </button>
         ))}
       </div>
+
+      {activeTab === 'apps' && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {appLinks.map(app => (
+            <Link key={app.name} to={app.path} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-500 transition-all group">
+              <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:bg-amber-100 transition-colors">
+                <app.icon className="w-6 h-6" />
+              </div>
+              <span className="font-semibold text-gray-800">{app.name}</span>
+            </Link>
+          ))}
+        </div>
+      )}
 
       {activeTab === 'organization' && (
         <div className="max-w-2xl">

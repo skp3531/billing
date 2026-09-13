@@ -26,8 +26,8 @@ export const createRole = async (req: Request, res: Response) => {
 export const updateRole = async (req: Request, res: Response) => {
   const role = await Role.findOne({ _id: req.params.id, organizationId: req.user!.organizationId });
   if (!role) return errorResponse(res, 'Role not found', 404);
-  if (role.isSystem) return errorResponse(res, 'Cannot modify system role', 400);
-
+  // Allow modifying system roles now as requested by user
+  // if (role.isSystem) return errorResponse(res, 'Cannot modify system role', 400);
   Object.assign(role, req.body);
   await role.save();
   return successResponse(res, role);

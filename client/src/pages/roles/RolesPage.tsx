@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { LockClosedIcon, ChevronDownIcon, ChevronUpIcon } from '@heroicons/react/24/outline';
 import api from '../../api/axios';
 import { Role } from '../../types';
+import { useAuthStore } from '../../store/authStore';
 
 const ALL_PERMISSIONS = [
   { group: 'Dashboard', perms: ['dashboard.view'] },
@@ -29,6 +30,9 @@ const RolesPage = () => {
   const [roles, setRoles] = useState<Role[]>([]);
   const [loading, setLoading] = useState(true);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const { hasPermission } = useAuthStore();
+  const canManage = hasPermission('roles.manage');
+  const [saving, setSaving] = useState<string | null>(null);
 
   const fetchRoles = async () => {
     setLoading(true);
@@ -48,11 +52,36 @@ const RolesPage = () => {
     setExpandedId(prev => prev === id ? null : id);
   };
 
+  const handleTogglePermission = async (roleId: string, permission: string) => {
+    if (!canManage) return;
+
+    const role = roles.find(r => r._id === roleId);
+    if (!role) return;
+
+    const newPermissions = role.permissions.includes(permission)
+      ? role.permissions.filter(p => p !== permission)
+      : [...role.permissions, permission];
+
+    // Optimistically update UI
+    setRoles(roles.map(r => r._id === roleId ? { ...r, permissions: newPermissions } : r));
+
+    setSaving(roleId);
+    try {
+      await api.put(`/roles/${roleId}`, { permissions: newPermissions });
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to update role');
+      // Revert on error
+      fetchRoles();
+    } finally {
+      setSaving(null);
+    }
+  };
+
   return (
     <div className="p-6">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Roles & Permissions</h1>
-        <p className="text-gray-500 text-sm mt-1">View the roles and their associated permissions</p>
+        <p className="text-gray-500 text-sm mt-1">View and manage roles and their associated permissions</p>
       </div>
 
       {loading ? (
@@ -70,7 +99,10 @@ const RolesPage = () => {
                 <div className="flex items-center gap-3">
                   {role.isSystem && <LockClosedIcon className="w-4 h-4 text-gray-400" />}
                   <div className="text-left">
-                    <h3 className="font-semibold text-gray-900">{role.name}</h3>
+                    <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                      {role.name}
+                      {saving === role._id && <span className="text-xs text-amber-500 animate-pulse">Saving...</span>}
+                    </h3>
                     <p className="text-sm text-gray-500">{role.permissions.length} permissions</p>
                   </div>
                   {role.isSystem && (
@@ -87,20 +119,36 @@ const RolesPage = () => {
                 <div className="border-t border-gray-100 p-5">
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                     {ALL_PERMISSIONS.map(({ group, perms }) => {
-                      const granted = perms.filter(p => role.permissions.includes(p));
-                      if (granted.length === 0) return null;
+                      if (!canManage) {
+                        const granted = perms.filter(p => role.permissions.includes(p));
+                        if (granted.length === 0) return null;
+                      }
+
                       return (
-                        <div key={group} className="bg-gray-50 rounded-lg p-3">
+                        <div key={group} className="bg-gray-50 rounded-lg p-3 border border-gray-100">
                           <h4 className="text-xs font-semibold text-gray-500 uppercase mb-2">{group}</h4>
                           <div className="space-y-1">
-                            {perms.map(p => (
-                              <div key={p} className="flex items-center gap-2">
-                                <div className={`w-2 h-2 rounded-full ${role.permissions.includes(p) ? 'bg-green-500' : 'bg-gray-200'}`} />
-                                <span className={`text-xs font-mono ${role.permissions.includes(p) ? 'text-gray-700' : 'text-gray-300'}`}>
-                                  {p.split('.')[1]}
-                                </span>
-                              </div>
-                            ))}
+                            {perms.map(p => {
+                              const hasPerm = role.permissions.includes(p);
+                              return (
+                                <div 
+                                  key={p} 
+                                  onClick={() => handleTogglePermission(role._id, p)}
+                                  className={`flex items-center gap-2 p-1.5 rounded-md transition-colors ${canManage ? 'cursor-pointer hover:bg-white' : ''}`}
+                                >
+                                  {canManage ? (
+                                    <div className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors focus:outline-none ${hasPerm ? 'bg-green-500' : 'bg-gray-300'}`}>
+                                      <span className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${hasPerm ? 'translate-x-3.5' : 'translate-x-0.5'}`} />
+                                    </div>
+                                  ) : (
+                                    <div className={`w-2 h-2 rounded-full ${hasPerm ? 'bg-green-500' : 'bg-gray-200'}`} />
+                                  )}
+                                  <span className={`text-xs font-mono select-none ${hasPerm ? 'text-gray-900 font-medium' : 'text-gray-400'}`}>
+                                    {p.split('.')[1]}
+                                  </span>
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       );

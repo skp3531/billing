@@ -9,7 +9,7 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', requirePermission(PERMISSIONS.MENU_VIEW), asyncHandler(getCategories));
+router.get('/', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getCategories));
 router.post('/', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(createCategory));
 router.put('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(updateCategory));
 router.delete('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(deleteCategory));

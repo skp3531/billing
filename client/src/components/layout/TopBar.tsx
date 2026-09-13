@@ -42,7 +42,7 @@ const TopBar = () => {
       <div className="flex items-center min-w-0">
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
+          className="hidden md:block text-gray-600 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-lg p-1.5 hover:bg-gray-100 transition-colors"
           aria-label="Toggle navigation menu"
         >
           <Bars3Icon className="h-6 w-6" />
