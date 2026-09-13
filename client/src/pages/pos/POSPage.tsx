@@ -242,7 +242,7 @@ const POSPage = () => {
         }
       }
 
-      await orderApi.createOrder({
+      const res = await orderApi.createOrder({
         outletId: currentOutlet._id,
         type: orderType,
         paymentMethod,
@@ -256,18 +256,21 @@ const POSPage = () => {
           modifiers: c.modifiers,
           quantity: c.quantity,
           unitPrice: c.unitPrice,
-          subtotal: c.subtotal
+          subtotal: c.subtotal,
+          notes: c.notes
         })),
         subtotal,
         taxTotal: tax,
         discountTotal: 0,
         grandTotal,
         status: 'PENDING',
-        paymentStatus: paymentMethod === 'cash' ? 'completed' : 'pending'
+        paymentStatus: paymentMethod === 'cash' ? 'PAID' : 'UNPAID'
       });
       toast.success('Order placed successfully!');
       setCart([]);
       setShowCheckout(false);
+      setCompletedOrder(res.data);
+      setShowReceiptModal(true);
       setCustomerName('');
       setCustomerPhone('');
       setTableNumber('');
@@ -432,7 +435,7 @@ const POSPage = () => {
 
       {/* Mobile Cart Sheet Drawer */}
       {showMobileCart && (
-        <div className="lg:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/50 backdrop-blur-xs">
+        <div className="lg:hidden fixed inset-0 z-[60] flex flex-col justify-end bg-black/50 backdrop-blur-xs">
           <div className="bg-white rounded-t-3xl max-h-[85vh] flex flex-col shadow-2xl overflow-hidden animate-in slide-in-from-bottom duration-200">
             {/* Header */}
             <div className="p-4 border-b bg-gray-50 flex justify-between items-center shrink-0">
@@ -521,7 +524,7 @@ const POSPage = () => {
 
       {/* Item Config Modal */}
       {configuringItem && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-2xl w-full max-w-md mx-3 sm:mx-auto max-h-[90vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-900">{configuringItem.name}</h3>
@@ -585,7 +588,7 @@ const POSPage = () => {
 
       {/* Checkout Modal */}
       {showCheckout && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-2xl w-full max-w-lg mx-3 sm:mx-auto max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="p-4 border-b flex justify-between items-center bg-gray-50">
               <h3 className="text-xl font-bold text-gray-900">Checkout</h3>
@@ -641,7 +644,7 @@ const POSPage = () => {
                     <div className="absolute right-3 top-8 text-gray-400 text-xs">Searching...</div>
                   )}
                   {showCustomerDropdown && (
-                    <div className="absolute z-50 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                    <div className="absolute z-[60] left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
                       {customerSearchResults.length > 0 ? (
                         customerSearchResults.map((c) => (
                           <button
@@ -727,7 +730,7 @@ const POSPage = () => {
       
       {/* Receipt Modal */}
       {showReceiptModal && completedOrder && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-[60] p-4">
           <div className="bg-[#fcfaf7] rounded-3xl w-full max-w-sm overflow-hidden flex flex-col shadow-2xl">
             <div className="p-6 text-center border-b border-gray-200 bg-white relative">
               <p className="text-xs font-bold text-orange-500 uppercase tracking-widest mb-1">Payment Received</p>
