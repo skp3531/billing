@@ -47,7 +47,6 @@ const Sidebar = () => {
   };
 
   return (
-      {/* Sidebar Aside */}
       <aside className={clsx(
         "bg-gray-900 text-white transition-all duration-300 z-50",
         // Hidden on mobile, only flex on desktop

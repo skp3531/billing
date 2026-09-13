@@ -7,7 +7,7 @@ import { Organization } from '../../types';
 import { BuildingOffice2Icon, MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
 import PrinterSettingsTab from './PrinterSettingsTab';
 
-type Tab = 'organization' | 'outlets' | 'roles' | 'printers' | 'modules';
+type Tab = 'organization' | 'outlets' | 'roles' | 'printers' | 'modules' | 'apps';
 
 const SettingsPage = () => {
   const { organization: currentOrg, setAuth } = useAuthStore();
