@@ -121,7 +121,7 @@ export interface MenuItem {
 
 export type OrderStatus = 'PENDING' | 'PREPARING' | 'COMPLETED' | 'CANCELLED' | 'placed' | 'accepted' | 'ready';
 export type PaymentStatus = 'PAID' | 'UNPAID' | 'pending' | 'completed' | 'failed' | 'refunded';
-export type PaymentMethod = 'cash' | 'card' | 'upi';
+export type PaymentMethod = 'CASH' | 'CARD' | 'UPI' | 'PENDING' | 'SPLIT';
 export type OrderType = 'dine_in' | 'takeaway' | 'delivery';
 
 export interface OrderItemModifier {

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
+import { db } from '../../utils/db';
 import { Category, MenuItem, OrderItemModifier, MenuVariant, OrderType, PaymentMethod } from '../../types';
 import { getCategories } from '../../api/category.api';
 import { getMenuItems } from '../../api/menu.api';
@@ -11,6 +12,8 @@ import { POSHeader } from './components/POSHeader';
 import { POSSidebar } from './components/POSSidebar';
 import { ProductGrid } from './components/ProductGrid';
 import { CartSidebar } from './components/CartSidebar';
+import { CheckoutModal } from './components/CheckoutModal';
+import { CustomerModal } from './components/CustomerModal';
 
 interface CartItem {
   cartItemId: string;
@@ -35,6 +38,9 @@ const POSPage = () => {
 
   const [cart, setCart] = useState<CartItem[]>([]);
   const [orderType, setOrderType] = useState<OrderType>('takeaway');
+  const [showCheckout, setShowCheckout] = useState(false);
+  const [showCustomer, setShowCustomer] = useState(false);
+  const [customer, setCustomer] = useState<any>(null);
   
   useEffect(() => {
     fetchData();
@@ -61,12 +67,35 @@ const POSPage = () => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'F2') { e.preventDefault(); setCart([]); toast('New Sale Started'); }
-      if (e.key === 'F10') { e.preventDefault(); handleCheckout(); }
-      if (e.key === 'F8') { e.preventDefault(); toast('Hold Bill (Coming Soon)'); }
+      if (e.key === 'F10') { e.preventDefault(); if(cart.length > 0) setShowCheckout(true); }
+      if (e.key === 'F4') { e.preventDefault(); setShowCustomer(true); }
+      if (e.key === 'F8') { e.preventDefault(); handleHoldBill(); }
+      if (e.key === 'F9') { e.preventDefault(); handleRecallBill(); }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [cart]);
+
+  const handleHoldBill = async () => {
+    if (cart.length === 0) return;
+    await db.holdBills.add({ cart, orderType, customer, createdAt: new Date() });
+    toast.success('Bill placed on hold!');
+    setCart([]);
+    setCustomer(null);
+  };
+  
+  const handleRecallBill = async () => {
+    const held = await db.holdBills.orderBy('createdAt').reverse().first();
+    if (held) {
+      setCart(held.cart);
+      setOrderType(held.orderType);
+      setCustomer(held.customer);
+      await db.holdBills.delete(held.id);
+      toast.success('Bill recalled!');
+    } else {
+      toast.error('No bills on hold.');
+    }
+  };
 
   const handleAddToCart = (item: MenuItem) => {
     // If it has variants/modifiers, we should show a modal. 
@@ -113,13 +142,43 @@ const POSPage = () => {
   const handleSidebarAction = (action: string) => {
     if (action === 'new') setCart([]);
     else if (action.startsWith('type_')) setOrderType(action.split('_')[1] as OrderType);
+    else if (action === 'hold') handleHoldBill();
+    else if (action === 'recall') handleRecallBill();
+    else if (action === 'customer') setShowCustomer(true);
+    else if (action === 'payment') { if(cart.length>0) setShowCheckout(true); }
     else toast(`${action} Coming Soon`);
   };
 
-  const handleCheckout = () => {
-    if (cart.length === 0) return;
-    toast.success('Checkout flow opening...');
-    // Real implementation will open payment modal
+  const handleCheckoutConfirm = async (method: PaymentMethod, splits?: any[]) => {
+    try {
+      const orderPayload = {
+        orderType,
+        paymentMethod: method,
+        splitPayments: splits,
+        paymentStatus: (method === 'PENDING' ? 'UNPAID' : 'PAID') as any,
+        customer: customer ? { name: customer.name, phone: customer.phone } : undefined,
+        items: cart.map(c => ({
+          menuItemId: c.menuItem._id,
+          name: c.menuItem.name,
+          quantity: c.quantity,
+          unitPrice: c.unitPrice,
+          itemTotal: c.subtotal,
+          notes: c.notes,
+          modifiers: c.modifiers
+        })),
+        subtotal,
+        taxTotal,
+        discountTotal: 0,
+        grandTotal
+      };
+      const res = await orderApi.createOrder(orderPayload);
+      toast.success('Order completed successfully!');
+      setCart([]);
+      setCustomer(null);
+      setShowCheckout(false);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to create order');
+    }
   };
 
   const subtotal = cart.reduce((sum, item) => sum + item.subtotal, 0);
@@ -149,14 +208,16 @@ const POSPage = () => {
           cart={cart}
           updateQuantity={updateQuantity}
           removeItem={removeItem}
-          onCheckout={handleCheckout}
+          onCheckout={() => setShowCheckout(true)}
           subtotal={subtotal}
           taxTotal={taxTotal}
           grandTotal={grandTotal}
-          customerName=""
-          onOpenCustomerModal={() => toast('Customer search opening...')}
+          customerName={customer?.name || ''}
+          onOpenCustomerModal={() => setShowCustomer(true)}
         />
       </div>
+      <CheckoutModal isOpen={showCheckout} onClose={() => setShowCheckout(false)} onConfirm={handleCheckoutConfirm} grandTotal={grandTotal} />
+      <CustomerModal isOpen={showCustomer} onClose={() => setShowCustomer(false)} onSelectCustomer={setCustomer} />
     </div>
   );
 };

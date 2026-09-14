@@ -12,13 +12,15 @@ export class RestoPOSDB extends Dexie {
   categories!: Table<Category, string>;
   menuItems!: Table<MenuItem, string>;
   offlineOrders!: Table<OfflineOrder, string>;
+  holdBills!: Table<any>;
 
   constructor() {
     super('RestoPOS_Offline');
-    this.version(1).stores({
+    this.version(2).stores({
       categories: '_id',
       menuItems: '_id',
-      offlineOrders: '++id, status'
+      offlineOrders: '++id, status',
+      holdBills: '++id, orderType, createdAt'
     });
   }
 }

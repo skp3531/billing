@@ -39,7 +39,8 @@ export interface IOrder extends Document {
   customer?: ICustomer;
   orderType: 'DINE_IN' | 'TAKEAWAY' | 'DELIVERY';
   status: 'PENDING' | 'PREPARING' | 'COMPLETED' | 'CANCELLED';
-  paymentMethod: 'CASH' | 'CARD' | 'UPI' | 'PENDING';
+  paymentMethod: 'CASH' | 'CARD' | 'UPI' | 'PENDING' | 'SPLIT';
+  splitPayments?: { method: 'CASH' | 'CARD' | 'UPI'; amount: number }[];
   paymentStatus: 'PAID' | 'UNPAID';
   items: IOrderItem[];
   subtotal: number;
