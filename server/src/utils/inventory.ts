@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import MenuItem from '../models/MenuItem';
 import RawMaterial from '../models/RawMaterial';
+import { Organization } from '../models/Organization';
 
 export const deductInventoryForOrder = async (order: any, session?: mongoose.ClientSession) => {
   const deductions = new Map<string, number>();
@@ -44,6 +45,9 @@ export const deductInventoryForOrder = async (order: any, session?: mongoose.Cli
   if (deductions.size > 0) {
     // Check inventory levels before deducting
     const materialIds = Array.from(deductions.keys());
+    const org = await Organization.findById(order.organizationId).session(session || null);
+    const allowNegativeStock = org?.allowNegativeStock ?? false;
+
     const materials = await RawMaterial.find({ 
       _id: { $in: materialIds },
       organizationId: order.organizationId,
@@ -58,7 +62,7 @@ export const deductInventoryForOrder = async (order: any, session?: mongoose.Cli
       }
       
       const needed = deductions.get(id) || 0;
-      if (mat.currentStock < needed) {
+      if (mat.currentStock < needed && !allowNegativeStock) {
         throw new Error(`Insufficient stock for raw material: ${mat.name}. Needed ${needed}, but only ${mat.currentStock} available.`);
       }
     }

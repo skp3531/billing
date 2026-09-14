@@ -4,7 +4,7 @@ import { successResponse, errorResponse } from '../utils/apiResponse';
 
 export const getCategories = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
-  const categories = await Category.find({ organizationId }).sort({ sortOrder: 1 });
+  const categories = await Category.find({ organizationId, active: true }).sort({ sortOrder: 1 });
   return successResponse(res, categories, 'Categories fetched successfully');
 };
 

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 import { useSearchParams } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import { db } from '../../utils/db';
+import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { Category, MenuItem, Order, OrderItemModifier, MenuVariant, OrderType, PaymentMethod } from '../../types';
 import { getCategories } from '../../api/category.api';
 import { getMenuItems } from '../../api/menu.api';

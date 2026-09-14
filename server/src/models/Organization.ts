@@ -12,6 +12,7 @@ export interface IOrganization extends Document {
     pincode?: string;
   };
   gstin?: string;
+  allowNegativeStock: boolean;
   active: boolean;
   modulesEnabled?: { tables: boolean; kitchen: boolean };
   printSize?: string;
