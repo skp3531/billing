@@ -7,6 +7,7 @@ export interface AccessTokenPayload {
   roleId: string;
   roleName: string;
   permissions: string[];
+  outletIds: string[];
 }
 
 export interface RefreshTokenPayload {

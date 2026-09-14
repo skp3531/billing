@@ -10,6 +10,11 @@ import env from '../config/env';
 
 dotenv.config();
 
+if (process.env.ALLOW_DB_SEED !== 'true') {
+  console.error('ERROR: Database seeding is disabled. Set ALLOW_DB_SEED=true to run this script.');
+  process.exit(1);
+}
+
 const seed = async () => {
   try {
     await mongoose.connect(env.MONGO_URI);
@@ -57,11 +62,13 @@ const seed = async () => {
       rolesMap[roleName] = role._id;
     }
 
+    const defaultPassword = process.env.SEED_PASSWORD || 'Default@123';
+    
     const usersToSeed = [
-      { name: 'Sanjay Kumar', email: 'owner@shakesphere.com', password: 'Owner@123', roleName: 'OWNER' },
-      { name: 'Rahul Sharma', email: 'manager@shakesphere.com', password: 'Manager@123', roleName: 'MANAGER' },
-      { name: 'Priya Das', email: 'cashier@shakesphere.com', password: 'Cashier@123', roleName: 'CASHIER' },
-      { name: 'Ravi Kumar', email: 'kitchen@shakesphere.com', password: 'Kitchen@123', roleName: 'KITCHEN' },
+      { name: 'Sanjay Kumar', email: 'owner@shakesphere.com', password: defaultPassword, roleName: 'OWNER' },
+      { name: 'Rahul Sharma', email: 'manager@shakesphere.com', password: defaultPassword, roleName: 'MANAGER' },
+      { name: 'Priya Das', email: 'cashier@shakesphere.com', password: defaultPassword, roleName: 'CASHIER' },
+      { name: 'Ravi Kumar', email: 'kitchen@shakesphere.com', password: defaultPassword, roleName: 'KITCHEN' },
     ];
 
     for (const u of usersToSeed) {

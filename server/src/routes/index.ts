@@ -16,9 +16,16 @@ import customerRoutes from './customer.routes';
 import expenseRoutes from './expense.routes';
 import printerRoutes from './printer.routes';
 
+import { requireOutletAccess } from '../middleware/requireOutletAccess';
+import { authenticate } from '../middleware/authenticate';
+
 const router = Router();
 
 router.use('/auth', authRoutes);
+
+// Apply authenticate and outlet access middleware to all routes below
+router.use(authenticate);
+router.use(requireOutletAccess);
 router.use('/organizations', orgRoutes);
 router.use('/outlets', outletRoutes);
 router.use('/users', userRoutes);

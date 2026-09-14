@@ -84,7 +84,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
     let stationName = 'general';
     if (menuItem.categoryId) {
-      const category = await Category.findById(menuItem.categoryId);
+      const category = await Category.findOne({ _id: menuItem.categoryId, organizationId });
       if (category) {
         stationName = category.name;
       }
@@ -156,9 +156,10 @@ export const createOrder = async (req: Request, res: Response) => {
 
   
   if (order.status === 'COMPLETED' && req.body.customerId) {
-    await Customer.findByIdAndUpdate(req.body.customerId, {
-      $inc: { totalSpent: order.grandTotal, loyaltyPoints: Math.floor(order.grandTotal / 100) }
-    });
+    await Customer.findOneAndUpdate(
+      { _id: req.body.customerId, organizationId },
+      { $inc: { totalSpent: order.grandTotal, loyaltyPoints: Math.floor(order.grandTotal / 100) } }
+    );
   }
 
   return successResponse(res, order, 'Order created successfully', 201);
