@@ -9,6 +9,7 @@ import Customer from '../models/Customer';
 import Category from '../models/Category';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 import { deductInventoryForOrder, restoreInventoryForOrder } from '../utils/inventory';
+import { createAuditLog } from '../utils/auditLog';
 
 export const createOrder = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
@@ -203,6 +204,20 @@ export const createOrder = async (req: Request, res: Response) => {
         { session }
       );
     }
+
+    // Audit Logging
+    await createAuditLog({
+      organizationId,
+      outletId,
+      userId: req.user!.userId,
+      userName: req.user!.userId,
+      action: 'order.created',
+      entity: 'Order',
+      entityId: order._id.toString(),
+      ipAddress: req.ip,
+      userAgent: req.headers['user-agent'],
+      changes: { orderNumber: order.orderNumber, grandTotal: order.grandTotal, status: order.status }
+    }, session);
 
     await session.commitTransaction();
   } catch (error: any) {

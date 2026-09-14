@@ -1,4 +1,5 @@
 import { AuditLog } from '../models/AuditLog';
+import mongoose from 'mongoose';
 
 interface LogParams {
   organizationId: string;
@@ -13,9 +14,13 @@ interface LogParams {
   userAgent?: string;
 }
 
-export const createAuditLog = async (params: LogParams) => {
+export const createAuditLog = async (params: LogParams & { metadata?: any }, session?: mongoose.ClientSession) => {
   try {
-    await AuditLog.create(params);
+    if (session) {
+      await AuditLog.create([params], { session });
+    } else {
+      await AuditLog.create(params);
+    }
   } catch (error) {
     console.error('Failed to create audit log', error);
   }
