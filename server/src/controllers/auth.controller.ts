@@ -29,6 +29,7 @@ export const login = async (req: Request, res: Response) => {
 
   const accessToken = signAccessToken({
     userId: user.id,
+    userName: user.name,
     organizationId: user.organizationId.toString(),
     roleId: role.id,
     roleName: role.name,
@@ -108,6 +109,7 @@ export const refresh = async (req: Request, res: Response) => {
 
     const accessToken = signAccessToken({
       userId: user.id,
+      userName: user.name,
       organizationId: user.organizationId.toString(),
       roleId: user.roleId.id,
       roleName: user.roleId.name,

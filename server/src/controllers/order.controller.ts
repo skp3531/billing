@@ -8,6 +8,7 @@ import Table from '../models/Table';
 import Customer from '../models/Customer';
 import Category from '../models/Category';
 import { successResponse, errorResponse } from '../utils/apiResponse';
+import { assertOutletAccess } from '../middleware/requireOutletAccess';
 import { deductInventoryForOrder, restoreInventoryForOrder } from '../utils/inventory';
 import { createAuditLog } from '../utils/auditLog';
 
@@ -54,36 +55,61 @@ export const createOrder = async (req: Request, res: Response) => {
     let selectedVariant;
     if (item.variant) {
       const variantName = typeof item.variant === 'string' ? item.variant : item.variant.name;
-      const dbVariant = menuItem.variants.find((v: any) => v.name === variantName);
+      const dbVariant = menuItem.variants?.find((v: any) => v.name === variantName);
       if (dbVariant) {
         // Variant price is the absolute price, not an addition
         unitPrice = dbVariant.price;
         selectedVariant = { name: dbVariant.name, price: dbVariant.price };
+      } else {
+        return errorResponse(res, `Invalid variant selected: ${variantName} for menu item ${menuItem.name}`, 400);
       }
     }
 
     const selectedModifiers = [];
+    const groupedSelections = new Map<string, number>();
+
     if (item.modifiers && item.modifiers.length > 0) {
       for (const mod of item.modifiers) {
         const modName = typeof mod === 'string' ? mod : mod.name;
-        let dbModPrice = 0;
         let found = false;
+        
         for (const group of menuItem.modifierGroups) {
           const dbOpt = group.options.find((o: any) => o.name === modName);
           if (dbOpt) {
-            dbModPrice = dbOpt.price;
+            if (!dbOpt.active) {
+              return errorResponse(res, `Modifier option ${modName} is not active`, 400);
+            }
+            unitPrice += dbOpt.price;
+            selectedModifiers.push({ name: modName, price: dbOpt.price });
+            groupedSelections.set(group.name, (groupedSelections.get(group.name) || 0) + 1);
             found = true;
             break;
           }
         }
-        if (found) {
-          unitPrice += dbModPrice;
-          selectedModifiers.push({ name: modName, price: dbModPrice });
+        
+        if (!found) {
+          return errorResponse(res, `Invalid modifier selected: ${modName} for menu item ${menuItem.name}`, 400);
         }
       }
     }
 
-    const taxRate = menuItem.taxRate || 5;
+    // Validate modifier groups constraints
+    if (menuItem.modifierGroups && menuItem.modifierGroups.length > 0) {
+      for (const group of menuItem.modifierGroups) {
+        const selectionCount = groupedSelections.get(group.name) || 0;
+        if (group.isRequired && selectionCount === 0) {
+          return errorResponse(res, `Modifier group ${group.name} is required for ${menuItem.name}`, 400);
+        }
+        if (selectionCount < group.minSelections) {
+          return errorResponse(res, `Minimum ${group.minSelections} selections required for ${group.name}`, 400);
+        }
+        if (selectionCount > group.maxSelections) {
+          return errorResponse(res, `Maximum ${group.maxSelections} selections allowed for ${group.name}`, 400);
+        }
+      }
+    }
+
+    const taxRate = menuItem.taxRate ?? 0;
     const taxType = menuItem.taxType || 'EXCLUSIVE';
 
     let basePriceExTax = unitPrice;
@@ -170,7 +196,7 @@ export const createOrder = async (req: Request, res: Response) => {
       tableNumber,
       customer,
       cashierId: req.user!.userId,
-      cashierName: req.user!.userId,
+      cashierName: req.user!.userName || 'Unknown Cashier',
       orderType: finalOrderType,
       status: (status.toUpperCase() === 'PLACED' || status.toUpperCase() === 'ACCEPTED') ? 'PENDING' : status.toUpperCase(),
       paymentMethod: finalPaymentMethod,
@@ -274,6 +300,7 @@ export const getOrder = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
   const order = await Order.findOne({ _id: id, organizationId });
   if (!order) return errorResponse(res, 'Order not found', 404);
+  if (!assertOutletAccess(order.outletId.toString(), req.user)) return errorResponse(res, 'Forbidden: You do not have access to this outlet', 403);
   return successResponse(res, order, 'Order fetched successfully');
 };
 

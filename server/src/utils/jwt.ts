@@ -3,6 +3,7 @@ import env from '../config/env';
 
 export interface AccessTokenPayload {
   userId: string;
+  userName: string;
   organizationId: string;
   roleId: string;
   roleName: string;
