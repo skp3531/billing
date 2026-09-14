@@ -72,22 +72,22 @@ function App() {
         <Route path="/" element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="setup" element={<SetupWizard />} />
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="pos" element={<POSPage />} />
-          <Route path="orders" element={<OrdersPage />} />
+          <Route path="dashboard" element={<PermissionGuard permission="dashboard.view"><DashboardPage /></PermissionGuard>} />
+          <Route path="pos" element={<PermissionGuard permission="pos.view"><POSPage /></PermissionGuard>} />
+          <Route path="orders" element={<PermissionGuard permission="orders.view"><OrdersPage /></PermissionGuard>} />
           <Route path="tables" element={<ModuleGuard module="tables"><TablesPage /></ModuleGuard>} />
           <Route path="kitchen" element={<ModuleGuard module="kitchen"><KitchenPage /></ModuleGuard>} />
-          <Route path="menu" element={<MenuPage />} />
+          <Route path="menu" element={<PermissionGuard permission="menu.view"><MenuPage /></PermissionGuard>} />
           <Route path="inventory" element={<PermissionGuard permission="inventory.view"><InventoryPage /></PermissionGuard>} />
           <Route path="purchases" element={<PermissionGuard permission="purchases.view"><PurchasesPage /></PermissionGuard>} />
           <Route path="suppliers" element={<PermissionGuard permission="suppliers.view"><SuppliersPage /></PermissionGuard>} />
           <Route path="customers" element={<PermissionGuard permission="customers.view"><CustomersPage /></PermissionGuard>} />
           <Route path="staff" element={<PermissionGuard permission="staff.view"><UsersPage /></PermissionGuard>} />
           <Route path="expenses" element={<PermissionGuard permission="expenses.view"><ExpensesPage /></PermissionGuard>} />
-          <Route path="reports" element={<ReportsPage />} />
-          <Route path="settings" element={<SettingsPage />} />
-          <Route path="settings/outlets" element={<OutletsPage />} />
-          <Route path="settings/roles" element={<RolesPage />} />
+          <Route path="reports" element={<PermissionGuard permission="reports.view"><ReportsPage /></PermissionGuard>} />
+          <Route path="settings" element={<PermissionGuard permission="settings.view"><SettingsPage /></PermissionGuard>} />
+          <Route path="settings/outlets" element={<PermissionGuard permission="settings.manage"><OutletsPage /></PermissionGuard>} />
+          <Route path="settings/roles" element={<PermissionGuard permission="roles.manage"><RolesPage /></PermissionGuard>} />
         </Route>
         
         <Route path="/unauthorized" element={<UnauthorizedPage />} />
