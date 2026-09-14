@@ -1,224 +1,328 @@
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
+import { asyncHandler } from '../middleware/asyncHandler';
 import Order from '../models/Order';
+import Expense from '../models/Expense';
+import MenuItem from '../models/MenuItem';
+import Customer from '../models/Customer';
+import Category from '../models/Category';
 
-
-const parseDateRange = (startDate?: string, endDate?: string) => {
-  if (!startDate || !endDate) return null;
-  const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
-  const end = new Date(endDate);
-  end.setHours(23, 59, 59, 999);
-  return { $gte: start, $lte: end };
+const getDateFilter = (req: Request) => {
+  const { startDate, endDate } = req.query;
+  const match: any = {};
+  if (startDate && endDate) {
+    const start = new Date(startDate as string);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(endDate as string);
+    end.setHours(23, 59, 59, 999);
+    match.createdAt = { $gte: start, $lte: end };
+  }
+  return match;
 };
 
-export const getDashboardMetrics = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { organizationId } = req.user;
+const getBaseMatch = (req: Request) => {
+  const match: any = { organizationId: new mongoose.Types.ObjectId(req.user!.organizationId) };
+  if (req.query.outletId) {
+    match.outletId = new mongoose.Types.ObjectId(req.query.outletId as string);
+  }
+  return match;
+};
+
+export const getDashboardKPIs = asyncHandler(async (req: Request, res: Response) => {
+  const match = getBaseMatch(req);
+  const dateFilter = getDateFilter(req);
+  const currentMatch = { ...match, ...dateFilter, status: 'COMPLETED' };
+  
+  let prevMatch = null;
+  if (req.query.startDate && req.query.endDate) {
+    const start = new Date(req.query.startDate as string);
+    const end = new Date(req.query.endDate as string);
+    const diff = end.getTime() - start.getTime();
     
-    // Get start and end of today
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-    const endOfToday = new Date();
-    endOfToday.setHours(23, 59, 59, 999);
+    const prevEnd = new Date(start.getTime() - 1);
+    prevEnd.setHours(23, 59, 59, 999);
+    
+    const prevStart = new Date(prevEnd.getTime() - diff);
+    prevStart.setHours(0, 0, 0, 0);
+    
+    prevMatch = { ...match, createdAt: { $gte: prevStart, $lte: prevEnd }, status: 'COMPLETED' };
+  }
 
-    // Filter by organization, today, and completed status for revenue
-    const matchStage = {
-      organizationId: new mongoose.Types.ObjectId(organizationId),
-      createdAt: { $gte: startOfToday, $lte: endOfToday },
-      status: { $in: ['COMPLETED', 'PENDING', 'PREPARING'] } // count non-cancelled for total orders maybe
-    };
-
-    const completedMatchStage = {
-      ...matchStage,
-      status: { $in: ['COMPLETED', 'PENDING', 'PREPARING'] }
-    };
-
-    // Aggregate for total orders and revenue today
-    const todayStats = await Order.aggregate([
+  const getMetrics = async (matchStage: any) => {
+    const result = await Order.aggregate([
       { $match: matchStage },
+      { $unwind: { path: '$items', preserveNullAndEmptyArrays: true } },
+      {
+        $group: {
+          _id: '$_id',
+          grandTotal: { $first: '$grandTotal' },
+          subtotal: { $first: '$subtotal' },
+          itemsCount: { $sum: '$items.quantity' },
+          customerId: { $first: '$customer.phone' }
+        }
+      },
       {
         $group: {
           _id: null,
-          totalOrders: { $sum: 1 },
-          totalRevenue: {
-            $sum: {
-              $cond: [{ $eq: ['$status', 'COMPLETED'] }, '$grandTotal', 0]
-            }
-          }
+          grossSales: { $sum: '$grandTotal' },
+          netSales: { $sum: '$subtotal' },
+          ordersCount: { $sum: 1 },
+          itemsSold: { $sum: '$itemsCount' },
+          uniqueCustomersList: { $addToSet: '$customerId' }
         }
       }
     ]);
-
-    // Top selling items today
-    const topItems = await Order.aggregate([
-      { $match: matchStage },
-      { $unwind: '$items' },
-      {
-        $group: {
-          _id: '$items.menuItemId',
-          name: { $first: '$items.name' },
-          quantitySold: { $sum: '$items.quantity' },
-          revenue: { $sum: '$items.itemTotal' }
-        }
-      },
-      { $sort: { quantitySold: -1 } },
-      { $limit: 5 }
-    ]);
-
-    res.json({
-      metrics: {
-        todayRevenue: todayStats[0]?.totalRevenue || 0,
-        todayOrders: todayStats[0]?.totalOrders || 0,
-      },
-      topItems
-    });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching dashboard metrics', error: error.message });
-  }
-};
-
-export const getReportData = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { organizationId } = req.user;
-    const { startDate, endDate } = req.query;
-
-    const query: any = {
-      organizationId: new mongoose.Types.ObjectId(organizationId),
-      status: 'COMPLETED'
-    };
-
-    const dateRange = parseDateRange(startDate as string, endDate as string);
-    if (dateRange) query.createdAt = dateRange;
-
-    // Group by date (YYYY-MM-DD)
-    const dailyStats = await Order.aggregate([
-      { $match: query },
-      {
-        $group: {
-          _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt" } },
-          ordersCount: { $sum: 1 },
-          revenue: { $sum: "$grandTotal" }
-        }
-      },
-      { $sort: { _id: 1 } }
-    ]);
-
-    res.json(dailyStats);
-  } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching report data', error: error.message });
-  }
-};
-
-export const getInventoryReport = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { organizationId } = req.user;
     
-    const RawMaterial = mongoose.model('RawMaterial');
-    const inventory = await RawMaterial.find({
-      organizationId: new mongoose.Types.ObjectId(organizationId)
-    }).select('name currentStock minStockLevel unit unitCost');
-
-    res.json({ inventory });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching inventory report', error: error.message });
-  }
-};
-
-export const getProfitLossReport = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { organizationId } = req.user;
-    const { startDate, endDate } = req.query;
-
-    const query: any = {
-      organizationId: new mongoose.Types.ObjectId(organizationId)
-    };
-
-    const dateRange = parseDateRange(startDate as string, endDate as string);
-    if (dateRange) query.createdAt = dateRange;
-
-    const orderQuery = { ...query, status: 'COMPLETED' };
-    const orders = await Order.aggregate([
-      { $match: orderQuery },
-      { $group: { _id: null, totalRevenue: { $sum: '$grandTotal' } } }
-    ]);
-    const totalRevenue = orders[0]?.totalRevenue || 0;
-
-    const Expense = mongoose.model('Expense');
-    const expenseQuery = { ...query };
-    const expDateRange = parseDateRange(startDate as string, endDate as string);
-    if (expDateRange) { expenseQuery.date = expDateRange; delete expenseQuery.createdAt; }
-    const expenses = await Expense.aggregate([
-      { $match: expenseQuery },
+    const expenseDateFilter = matchStage.createdAt ? { date: matchStage.createdAt } : {};
+    const expenseMatch = { ...match, ...expenseDateFilter };
+    const expenseResult = await Expense.aggregate([
+      { $match: expenseMatch },
       { $group: { _id: null, totalExpense: { $sum: '$amount' } } }
     ]);
-    const totalExpense = expenses[0]?.totalExpense || 0;
-
-    const Purchase = mongoose.model('Purchase');
-    const purchaseQuery = { ...query, status: 'COMPLETED' };
-    if (startDate && endDate) {
-      purchaseQuery.date = {
-        $gte: new Date(startDate as string),
-        $lte: new Date(endDate as string)
-      };
-      delete purchaseQuery.createdAt;
-    }
-    const purchases = await Purchase.aggregate([
-      { $match: purchaseQuery },
-      { $group: { _id: null, totalPurchase: { $sum: '$totalAmount' } } }
-    ]);
-    const totalPurchase = purchases[0]?.totalPurchase || 0;
-
-    const netProfit = totalRevenue - totalExpense - totalPurchase;
-
-    res.json({
-      totalRevenue,
-      totalExpense,
-      totalPurchase,
-      netProfit
-    });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching profit loss report', error: error.message });
-  }
-};
-
-
-export const getAdvancedReports = async (req: Request, res: Response) => {
-  try {
-    if (!req.user) return res.status(401).json({ message: 'Unauthorized' });
-    const { organizationId } = req.user;
-    const { startDate, endDate } = req.query;
-
-    const query: any = {
-      organizationId: new mongoose.Types.ObjectId(organizationId),
-      status: 'COMPLETED'
-    };
     
-    const dateRange = parseDateRange(startDate as string, endDate as string);
-    if (dateRange) query.createdAt = dateRange;
+    const data = result[0] || { grossSales: 0, netSales: 0, ordersCount: 0, itemsSold: 0, uniqueCustomersList: [] };
+    const expenses = expenseResult[0]?.totalExpense || 0;
+    const uniqueCustomersList = data.uniqueCustomersList || [];
+    const uniqueCustomers = uniqueCustomersList.filter((x: any) => x).length;
+    
+    return {
+      grossSales: data.grossSales || 0,
+      netSales: data.netSales || 0,
+      ordersCount: data.ordersCount || 0,
+      averageOrderValue: data.ordersCount > 0 ? data.grossSales / data.ordersCount : 0,
+      itemsSold: data.itemsSold || 0,
+      uniqueCustomers,
+      profit: (data.grossSales || 0) - expenses
+    };
+  };
 
-    // Payment Methods
-    const paymentMethods = await Order.aggregate([
-      { $match: query },
-      { $group: { _id: "$paymentMethod", count: { $sum: 1 }, revenue: { $sum: "$grandTotal" } } },
-      { $sort: { revenue: -1 } }
-    ]);
+  const currentMetrics = await getMetrics(currentMatch);
+  const prevMetrics = prevMatch ? await getMetrics(prevMatch) : null;
+  
+  res.json({ current: currentMetrics, previous: prevMetrics });
+});
 
-    // Top Selling Items (all time in range)
-    const topItems = await Order.aggregate([
-      { $match: query },
-      { $unwind: "$items" },
-      { $group: { _id: "$items.name", quantity: { $sum: "$items.quantity" }, revenue: { $sum: "$items.itemTotal" } } },
-      { $sort: { revenue: -1 } },
-      { $limit: 10 }
-    ]);
+export const getSalesAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req), status: 'COMPLETED' };
+  
+  const dailyTrend = await Order.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { $dateToString: { format: "%Y-%m-%d", date: "$createdAt", timezone: "Asia/Kolkata" } },
+        revenue: { $sum: "$grandTotal" },
+        orders: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+  
+  const orderTypeBreakdown = await Order.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: "$orderType",
+        revenue: { $sum: "$grandTotal" },
+        count: { $sum: 1 }
+      }
+    }
+  ]);
+  
+  const peakHours = await Order.aggregate([
+    { $match: match },
+    {
+      $group: {
+        _id: { $hour: { date: "$createdAt", timezone: "Asia/Kolkata" } },
+        revenue: { $sum: "$grandTotal" },
+        orders: { $sum: 1 }
+      }
+    },
+    { $sort: { _id: 1 } }
+  ]);
+  
+  res.json({ dailyTrend, orderTypeBreakdown, peakHours });
+});
 
-    res.json({ paymentMethods, topItems });
-  } catch (error: any) {
-    res.status(500).json({ message: 'Error fetching advanced reports', error: error.message });
+export const getProductAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req), status: 'COMPLETED' };
+  
+  const topItems = await Order.aggregate([
+    { $match: match },
+    { $unwind: "$items" },
+    {
+      $group: {
+        _id: "$items.menuItemId",
+        name: { $first: "$items.name" },
+        quantity: { $sum: "$items.quantity" },
+        revenue: { $sum: "$items.itemTotal" }
+      }
+    },
+    { $sort: { revenue: -1 } },
+    { $limit: 10 }
+  ]);
+  
+  const categoryBreakdown = await Order.aggregate([
+    { $match: match },
+    { $unwind: "$items" },
+    {
+      $lookup: {
+        from: 'menuitems',
+        localField: 'items.menuItemId',
+        foreignField: '_id',
+        as: 'menuItem'
+      }
+    },
+    { $unwind: "$menuItem" },
+    {
+      $lookup: {
+        from: 'categories',
+        localField: 'menuItem.categoryId',
+        foreignField: '_id',
+        as: 'category'
+      }
+    },
+    { $unwind: "$category" },
+    {
+      $group: {
+        _id: "$category._id",
+        name: { $first: "$category.name" },
+        revenue: { $sum: "$items.itemTotal" },
+        quantity: { $sum: "$items.quantity" }
+      }
+    },
+    { $sort: { revenue: -1 } }
+  ]);
+  
+  res.json({ topItems, categoryBreakdown });
+});
+
+export const getCustomerAnalytics = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req), status: 'COMPLETED' };
+  
+  const leaderboard = await Order.aggregate([
+    { $match: match },
+    { $match: { "customer.phone": { $exists: true, $ne: null } } },
+    {
+      $group: {
+        _id: "$customer.phone",
+        name: { $first: "$customer.name" },
+        revenue: { $sum: "$grandTotal" },
+        visits: { $sum: 1 }
+      }
+    },
+    { $sort: { revenue: -1 } },
+    { $limit: 10 }
+  ]);
+  
+  const customersInPeriod = await Order.distinct("customer.phone", match);
+  const returningCount = await Order.distinct("customer.phone", { 
+    ...getBaseMatch(req), 
+    status: 'COMPLETED',
+    createdAt: { $lt: match.createdAt?.$gte || new Date() },
+    "customer.phone": { $in: customersInPeriod }
+  });
+  
+  const returning = returningCount.length;
+  const newCustomers = Math.max(0, customersInPeriod.length - returning);
+  
+  res.json({ leaderboard, retention: { new: newCustomers, returning } });
+});
+
+export const getProfitAndLoss = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req) };
+  
+  const revenueResult = await Order.aggregate([
+    { $match: { ...match, status: 'COMPLETED' } },
+    { $group: { _id: null, revenue: { $sum: '$grandTotal' }, taxTotal: { $sum: '$taxTotal' } } }
+  ]);
+  
+  const expenseDateFilter = match.createdAt ? { date: match.createdAt } : {};
+  const expensesResult = await Expense.aggregate([
+    { $match: { ...getBaseMatch(req), ...expenseDateFilter } },
+    { $group: { _id: null, amount: { $sum: '$amount' } } }
+  ]);
+  
+  const revenue = revenueResult[0]?.revenue || 0;
+  const taxes = revenueResult[0]?.taxTotal || 0;
+  const expenses = expensesResult[0]?.amount || 0;
+  
+  const cogs = 0; // If raw material consumption is tracked, we can compute this. Defaulting to 0 for now.
+  const netProfit = revenue - cogs - expenses - taxes;
+  
+  res.json({ revenue, cogs, expenses, taxes, netProfit });
+});
+
+export const getGSTReport = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req), status: 'COMPLETED' };
+  
+  const gstReport = await Order.aggregate([
+    { $match: match },
+    { $unwind: "$items" },
+    {
+      $lookup: {
+        from: 'menuitems',
+        localField: 'items.menuItemId',
+        foreignField: '_id',
+        as: 'menuItem'
+      }
+    },
+    { $unwind: { path: "$menuItem", preserveNullAndEmptyArrays: true } },
+    {
+      $group: {
+        _id: { $ifNull: ["$menuItem.hsnCode", "UNKNOWN"] },
+        revenue: { $sum: "$items.itemTotal" },
+        totalTax: {
+          $sum: { 
+            $multiply: [
+              "$items.itemTotal", 
+              { $divide: [{ $ifNull: ["$menuItem.taxRate", 5] }, 100] }
+            ] 
+          }
+        }
+      }
+    },
+    {
+      $project: {
+        hsnCode: "$_id",
+        _id: 0,
+        revenue: 1,
+        totalTax: 1,
+        cgst: { $divide: ["$totalTax", 2] },
+        sgst: { $divide: ["$totalTax", 2] }
+      }
+    },
+    { $sort: { hsnCode: 1 } }
+  ]);
+  
+  res.json(gstReport);
+});
+
+export const getAIInsights = asyncHandler(async (req: Request, res: Response) => {
+  const match = { ...getBaseMatch(req), ...getDateFilter(req), status: 'COMPLETED' };
+  const insights: string[] = [];
+  
+  const topItem = await Order.aggregate([
+    { $match: match },
+    { $unwind: "$items" },
+    { $group: { _id: "$items.name", revenue: { $sum: "$items.itemTotal" } } },
+    { $sort: { revenue: -1 } },
+    { $limit: 1 }
+  ]);
+  
+  if (topItem.length > 0) {
+    insights.push(`${topItem[0]._id} generated the highest revenue this period.`);
   }
-};
+  
+  const orderTypes = await Order.aggregate([
+    { $match: match },
+    { $group: { _id: "$orderType", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 1 }
+  ]);
+  
+  if (orderTypes.length > 0) {
+    insights.push(`${orderTypes[0]._id} is the most popular order type.`);
+  }
+  
+  res.json({ insights });
+});

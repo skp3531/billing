@@ -7,7 +7,16 @@ import UsersPage from './pages/users/UsersPage';
 import OutletsPage from './pages/outlets/OutletsPage';
 import RolesPage from './pages/roles/RolesPage';
 import SettingsPage from './pages/settings/SettingsPage';
-import ReportsPage from './pages/reports/ReportsPage';
+import ReportsLayout from './pages/reports/ReportsLayout';
+import DashboardView from './pages/reports/DashboardView';
+import SalesView from './pages/reports/SalesView';
+import ProductsView from './pages/reports/ProductsView';
+import CustomersView from './pages/reports/CustomersView';
+import CashView from './pages/reports/CashView';
+import InventoryView from './pages/reports/InventoryView';
+import PnlView from './pages/reports/PnlView';
+import GstView from './pages/reports/GstView';
+import InsightsView from './pages/reports/InsightsView';
 import UnauthorizedPage from './pages/errors/UnauthorizedPage';
 import NotFoundPage from './pages/errors/NotFoundPage';
 import AppLayout from './components/layout/AppLayout';
@@ -84,7 +93,18 @@ function App() {
           <Route path="customers" element={<PermissionGuard permission="customers.view"><CustomersPage /></PermissionGuard>} />
           <Route path="staff" element={<PermissionGuard permission="staff.view"><UsersPage /></PermissionGuard>} />
           <Route path="expenses" element={<PermissionGuard permission="expenses.view"><ExpensesPage /></PermissionGuard>} />
-          <Route path="reports" element={<PermissionGuard permission="reports.view"><ReportsPage /></PermissionGuard>} />
+          <Route path="reports" element={<PermissionGuard permission="reports.view"><ReportsLayout /></PermissionGuard>}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<DashboardView />} />
+            <Route path="sales" element={<SalesView />} />
+            <Route path="products" element={<ProductsView />} />
+            <Route path="customers" element={<CustomersView />} />
+            <Route path="cash" element={<CashView />} />
+            <Route path="inventory" element={<InventoryView />} />
+            <Route path="pnl" element={<PnlView />} />
+            <Route path="gst" element={<GstView />} />
+            <Route path="insights" element={<InsightsView />} />
+          </Route>
           <Route path="settings" element={<PermissionGuard permission="settings.view"><SettingsPage /></PermissionGuard>} />
           <Route path="settings/outlets" element={<PermissionGuard permission="settings.manage"><OutletsPage /></PermissionGuard>} />
           <Route path="settings/roles" element={<PermissionGuard permission="roles.manage"><RolesPage /></PermissionGuard>} />

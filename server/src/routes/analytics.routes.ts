@@ -1,15 +1,27 @@
 import { Router } from 'express';
-import { getDashboardMetrics, getReportData, getInventoryReport, getProfitLossReport, getAdvancedReports } from '../controllers/analytics.controller';
+import { 
+  getDashboardKPIs, 
+  getSalesAnalytics, 
+  getProductAnalytics, 
+  getCustomerAnalytics, 
+  getProfitAndLoss, 
+  getGSTReport, 
+  getAIInsights 
+} from '../controllers/analytics.controller';
 import { authenticate } from '../middleware/authenticate';
+import { requirePermission } from '../middleware/authorize';
+import { PERMISSIONS } from '../utils/permissions'; // Might need this if restricted
 
 const router = Router();
 
 router.use(authenticate);
 
-router.get('/dashboard', getDashboardMetrics);
-router.get('/reports', getReportData);
-router.get('/reports/inventory', getInventoryReport);
-router.get('/reports/profit-loss', getProfitLossReport);
-router.get('/reports/advanced', getAdvancedReports);
+router.get('/dashboard-kpis', getDashboardKPIs);
+router.get('/sales', getSalesAnalytics);
+router.get('/products', getProductAnalytics);
+router.get('/customers', getCustomerAnalytics);
+router.get('/profit-and-loss', getProfitAndLoss);
+router.get('/gst-report', getGSTReport);
+router.get('/ai-insights', getAIInsights);
 
 export default router;

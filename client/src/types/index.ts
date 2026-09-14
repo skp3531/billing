@@ -110,6 +110,7 @@ export interface MenuItem {
   basePrice: number;
   taxRate: number;
   taxType: 'INCLUSIVE' | 'EXCLUSIVE';
+  hsnCode?: string;
   isVeg: boolean;
   spicinessLevel: number;
   variants: MenuVariant[];
