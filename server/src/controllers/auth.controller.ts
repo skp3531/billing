@@ -32,8 +32,8 @@ export const login = async (req: Request, res: Response) => {
     organizationId: user.organizationId.toString(),
     roleId: role.id,
     roleName: role.name,
-    permissions: role.permissions,
-    outletIds: user.outletIds.map((id: any) => id.toString()),
+    permissions: role.permissions || [],
+    outletIds: (user.outletIds || []).map((id: any) => id.toString()),
   });
 
   const refreshToken = signRefreshToken({
@@ -111,8 +111,8 @@ export const refresh = async (req: Request, res: Response) => {
       organizationId: user.organizationId.toString(),
       roleId: user.roleId.id,
       roleName: user.roleId.name,
-      permissions: user.roleId.permissions,
-      outletIds: user.outletIds.map((id: any) => id.toString()),
+      permissions: user.roleId.permissions || [],
+      outletIds: (user.outletIds || []).map((id: any) => id.toString()),
     });
 
     // Rotate refresh token
