@@ -10,8 +10,8 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', requirePermission(PERMISSIONS.SUPPLIERS_VIEW), asyncHandler(getSuppliers));
-router.post('/', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE), asyncHandler(createSupplier));
-router.put('/:id', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE), asyncHandler(updateSupplier));
-router.delete('/:id', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE), asyncHandler(deleteSupplier));
+router.post('/', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE, PERMISSIONS.SUPPLIERS_CREATE), asyncHandler(createSupplier));
+router.put('/:id', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE, PERMISSIONS.SUPPLIERS_EDIT), asyncHandler(updateSupplier));
+router.delete('/:id', requirePermission(PERMISSIONS.SUPPLIERS_MANAGE, PERMISSIONS.SUPPLIERS_DELETE), asyncHandler(deleteSupplier));
 
 export default router;

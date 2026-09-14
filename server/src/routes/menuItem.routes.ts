@@ -15,8 +15,8 @@ router.post('/csv/import', requirePermission(PERMISSIONS.MENU_MANAGE), uploadCSV
 
 router.get('/', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItems));
 router.get('/:id', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItem));
-router.post('/', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(createMenuItem));
-router.put('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(updateMenuItem));
-router.delete('/:id', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(deleteMenuItem));
+router.post('/', requirePermission(PERMISSIONS.MENU_MANAGE, PERMISSIONS.MENU_CREATE), asyncHandler(createMenuItem));
+router.put('/:id', requirePermission(PERMISSIONS.MENU_MANAGE, PERMISSIONS.MENU_EDIT), asyncHandler(updateMenuItem));
+router.delete('/:id', requirePermission(PERMISSIONS.MENU_MANAGE, PERMISSIONS.MENU_DELETE), asyncHandler(deleteMenuItem));
 
 export default router;

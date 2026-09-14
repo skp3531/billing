@@ -10,7 +10,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/', requirePermission(PERMISSIONS.PURCHASES_VIEW), asyncHandler(getPurchases));
-router.post('/', requirePermission(PERMISSIONS.PURCHASES_MANAGE), asyncHandler(createPurchase));
-router.patch('/:id/status', requirePermission(PERMISSIONS.PURCHASES_MANAGE), asyncHandler(updatePurchaseStatus));
+router.post('/', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_CREATE), asyncHandler(createPurchase));
+router.patch('/:id/status', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_EDIT), asyncHandler(updatePurchaseStatus));
 
 export default router;

@@ -11,9 +11,9 @@ router.use(authenticate);
 
 router.get('/', requirePermission(PERMISSIONS.ORDERS_VIEW), asyncHandler(getOrders));
 router.get('/:id', requirePermission(PERMISSIONS.ORDERS_VIEW), asyncHandler(getOrder));
-router.post('/', requirePermission(PERMISSIONS.POS_MANAGE), asyncHandler(createOrder));
-router.patch('/:id/status', requirePermission(PERMISSIONS.ORDERS_MANAGE), asyncHandler(updateOrderStatus));
-router.patch('/:id/items/:itemId/status', requirePermission(PERMISSIONS.ORDERS_MANAGE), asyncHandler(updateOrderItemStatus));
-router.delete('/:id', requirePermission(PERMISSIONS.ORDERS_MANAGE), asyncHandler(deleteOrder));
+router.post('/', requirePermission(PERMISSIONS.POS_MANAGE, PERMISSIONS.POS_CREATE_ORDER), asyncHandler(createOrder));
+router.patch('/:id/status', requirePermission(PERMISSIONS.ORDERS_MANAGE, PERMISSIONS.ORDERS_EDIT), asyncHandler(updateOrderStatus));
+router.patch('/:id/items/:itemId/status', requirePermission(PERMISSIONS.ORDERS_MANAGE, PERMISSIONS.ORDERS_EDIT), asyncHandler(updateOrderItemStatus));
+router.delete('/:id', requirePermission(PERMISSIONS.ORDERS_MANAGE, PERMISSIONS.ORDERS_DELETE), asyncHandler(deleteOrder));
 
 export default router;
