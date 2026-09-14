@@ -215,7 +215,7 @@ const MenuPage = () => {
                   <div key={item._id} className="border rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow">
                     <div className="flex justify-between items-start mb-2">
                       <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${item.isVegetarian ? 'bg-green-500' : 'bg-red-500'}`} title={item.isVegetarian ? "Veg" : "Non-Veg"} />
+                        <div className={`w-3 h-3 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`} title={item.isVeg ? "Veg" : "Non-Veg"} />
                         <h3 className="font-semibold text-gray-900">{item.name}</h3>
                       </div>
                       <div className="flex items-center gap-1">

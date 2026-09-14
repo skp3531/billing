@@ -34,6 +34,8 @@ export interface IMenuItem extends Document {
   name: string;
   description?: string;
   basePrice: number;
+  taxRate: number;
+  taxType: 'INCLUSIVE' | 'EXCLUSIVE';
   isVeg: boolean;
   image?: string;
   active: boolean;
@@ -89,6 +91,8 @@ const menuItemSchema = new Schema<IMenuItem>(
     name: { type: String, required: true },
     description: { type: String },
     basePrice: { type: Number, required: true },
+    taxRate: { type: Number, default: 5 },
+    taxType: { type: String, enum: ['INCLUSIVE', 'EXCLUSIVE'], default: 'EXCLUSIVE' },
     isVeg: { type: Boolean, default: true },
     image: { type: String },
     active: { type: Boolean, default: true },

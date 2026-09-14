@@ -30,7 +30,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, o
     item ? (typeof item.categoryId === 'object' ? item.categoryId._id : item.categoryId) : (categories[0]?._id || '')
   );
   const [basePrice, setBasePrice] = useState(item?.basePrice || 0);
-  const [isVegetarian, setIsVegetarian] = useState(item?.isVegetarian ?? true);
+  const [isVeg, setIsVegetarian] = useState(item?.isVeg ?? true);
   const [spicinessLevel, setSpicinessLevel] = useState(item?.spicinessLevel || 0);
   const [active, setActive] = useState(item?.active ?? true);
 
@@ -48,7 +48,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, o
       description,
       categoryId,
       basePrice,
-      isVegetarian,
+      isVeg,
       spicinessLevel,
       active,
       variants,
@@ -87,7 +87,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, o
 
   const addModifierOption = (groupIndex: number) => {
     const newGroups = [...modifierGroups];
-    newGroups[groupIndex].options.push({ name: '', price: 0, isVegetarian: true });
+    newGroups[groupIndex].options.push({ name: '', price: 0, isVeg: true });
     setModifierGroups(newGroups);
   };
 
@@ -171,7 +171,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, o
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={isVegetarian} onChange={e => setIsVegetarian(e.target.checked)} className="rounded border-gray-300 text-green-500 focus:ring-green-500" />
+                  <input type="checkbox" checked={isVeg} onChange={e => setIsVegetarian(e.target.checked)} className="rounded border-gray-300 text-green-500 focus:ring-green-500" />
                   <label className="text-sm font-medium text-gray-700">Vegetarian</label>
                 </div>
                 <div className="flex items-center gap-2">
@@ -281,7 +281,7 @@ const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, o
                         <input placeholder="Option name" value={opt.name} onChange={e => updateModifierOption(gIndex, oIndex, 'name', e.target.value)} className="flex-1 border rounded px-2 py-1 text-sm" />
                         <input type="number" placeholder="Price" value={opt.price} onChange={e => updateModifierOption(gIndex, oIndex, 'price', Number(e.target.value))} className="w-24 border rounded px-2 py-1 text-sm" />
                         <label className="flex items-center gap-1 text-xs whitespace-nowrap">
-                          <input type="checkbox" checked={opt.isVegetarian} onChange={e => updateModifierOption(gIndex, oIndex, 'isVegetarian', e.target.checked)} className="rounded text-green-500" />
+                          <input type="checkbox" checked={opt.isVeg} onChange={e => updateModifierOption(gIndex, oIndex, 'isVeg', e.target.checked)} className="rounded text-green-500" />
                           Veg
                         </label>
                         <button type="button" onClick={() => removeModifierOption(gIndex, oIndex)} className="p-1 text-red-500 hover:text-red-700">

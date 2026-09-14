@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import mongoose from 'mongoose';
 import Order from '../models/Order';
 import Counter from '../models/Counter';
 import MenuItem from '../models/MenuItem';
@@ -39,6 +40,7 @@ export const createOrder = async (req: Request, res: Response) => {
   const finalPaymentMethod = (paymentMethod || 'CASH').toUpperCase();
 
   let subtotal = 0;
+  let calculatedTaxTotal = 0;
   const calculatedItems = [];
 
   for (const item of items) {
@@ -53,7 +55,8 @@ export const createOrder = async (req: Request, res: Response) => {
       const variantName = typeof item.variant === 'string' ? item.variant : item.variant.name;
       const dbVariant = menuItem.variants.find((v: any) => v.name === variantName);
       if (dbVariant) {
-        unitPrice += dbVariant.price;
+        // Variant price is the absolute price, not an addition
+        unitPrice = dbVariant.price;
         selectedVariant = { name: dbVariant.name, price: dbVariant.price };
       }
     }
@@ -79,8 +82,25 @@ export const createOrder = async (req: Request, res: Response) => {
       }
     }
 
-    const itemTotal = unitPrice * item.quantity;
-    subtotal += itemTotal;
+    const taxRate = menuItem.taxRate || 5;
+    const taxType = menuItem.taxType || 'EXCLUSIVE';
+
+    let basePriceExTax = unitPrice;
+    let taxAmount = 0;
+
+    if (taxType === 'INCLUSIVE') {
+      basePriceExTax = unitPrice / (1 + taxRate / 100);
+      taxAmount = unitPrice - basePriceExTax;
+    } else {
+      taxAmount = unitPrice * (taxRate / 100);
+    }
+
+    const itemSubtotal = basePriceExTax * item.quantity;
+    const itemTaxTotal = taxAmount * item.quantity;
+    const itemTotal = itemSubtotal + itemTaxTotal;
+
+    subtotal += itemSubtotal;
+    calculatedTaxTotal += itemTaxTotal;
 
     let stationName = 'general';
     if (menuItem.categoryId) {
@@ -94,16 +114,30 @@ export const createOrder = async (req: Request, res: Response) => {
       menuItemId: menuItem._id,
       name: menuItem.name,
       quantity: item.quantity,
-      price: menuItem.basePrice,
+      price: unitPrice,
       variant: selectedVariant,
       modifiers: selectedModifiers,
       itemTotal,
+      subtotal: itemSubtotal,
       notes: item.notes,
       station: stationName,
     });
   }
 
-  const grandTotal = subtotal + taxTotal - discountTotal;
+  // Calculate grand total purely from server calculations
+  let finalDiscount = 0;
+  if (discountTotal > 0) {
+    // Check permission - using a general POS/Orders permission for now if discount.apply doesn't exist
+    if (!req.user!.permissions.includes('pos.manage')) {
+      return errorResponse(res, 'You do not have permission to apply discounts', 403);
+    }
+    
+    // Validate discount is not negative or exceeding subtotal
+    finalDiscount = Math.min(Number(discountTotal), subtotal);
+    if (finalDiscount < 0) finalDiscount = 0;
+  }
+  
+  const grandTotal = subtotal + calculatedTaxTotal - finalDiscount;
   
     const counterId = `order_${organizationId}_${outletId}`;
     let counter = await Counter.findById(counterId);
@@ -123,43 +157,60 @@ export const createOrder = async (req: Request, res: Response) => {
     const orderNumber = `ORD-${1000 + counter!.seq}`;
 
 
-  const order = await Order.create({
-    organizationId,
-    outletId,
-    orderNumber,
-    tableNumber,
-    customer,
-    cashierId: req.user!.userId,
-    cashierName: req.user!.userId, // Name not available in token directly
-    orderType: finalOrderType,
-    status: (status.toUpperCase() === 'PLACED' || status.toUpperCase() === 'ACCEPTED') ? 'PENDING' : status.toUpperCase(),
-    paymentMethod: finalPaymentMethod,
-    paymentStatus: finalPaymentMethod === 'PENDING' ? 'UNPAID' : (finalPaymentMethod === 'CASH' ? 'PAID' : 'UNPAID'),
-    items: calculatedItems,
-    subtotal,
-    taxTotal,
-    discountTotal,
-    grandTotal,
-    notes,
-  });
-
-  if (order.status === 'COMPLETED') {
-    await deductInventoryForOrder(order);
-  }
-
-  if (finalOrderType === 'DINE_IN' && tableNumber) {
-    await Table.findOneAndUpdate(
-      { name: tableNumber, organizationId, outletId },
-      { status: 'OCCUPIED' }
-    );
-  }
-
+  const session = await mongoose.startSession();
+  session.startTransaction();
   
-  if (order.status === 'COMPLETED' && req.body.customerId) {
-    await Customer.findOneAndUpdate(
-      { _id: req.body.customerId, organizationId },
-      { $inc: { totalSpent: order.grandTotal, loyaltyPoints: Math.floor(order.grandTotal / 100) } }
-    );
+  let order;
+  try {
+    const orderDocs = await Order.create([{
+      organizationId,
+      outletId,
+      orderNumber,
+      tableNumber,
+      customer,
+      cashierId: req.user!.userId,
+      cashierName: req.user!.userId,
+      orderType: finalOrderType,
+      status: (status.toUpperCase() === 'PLACED' || status.toUpperCase() === 'ACCEPTED') ? 'PENDING' : status.toUpperCase(),
+      paymentMethod: finalPaymentMethod,
+      paymentStatus: ['CASH', 'CARD', 'UPI'].includes(finalPaymentMethod) ? 'PAID' : 'UNPAID',
+      items: calculatedItems,
+      subtotal,
+      taxTotal: calculatedTaxTotal,
+      discountTotal: finalDiscount,
+      grandTotal,
+      notes,
+    }], { session });
+    
+    order = orderDocs[0];
+
+    if (order.status === 'COMPLETED') {
+      await deductInventoryForOrder(order, session);
+    }
+
+    if (finalOrderType === 'DINE_IN' && tableNumber) {
+      await Table.findOneAndUpdate(
+        { name: tableNumber, organizationId, outletId },
+        { status: 'OCCUPIED' },
+        { session }
+      );
+    }
+
+    if (order.status === 'COMPLETED' && req.body.customerId) {
+      await Customer.findOneAndUpdate(
+        { _id: req.body.customerId, organizationId },
+        { $inc: { totalSpent: order.grandTotal, loyaltyPoints: Math.floor(order.grandTotal / 100) } },
+        { session }
+      );
+    }
+
+    await session.commitTransaction();
+  } catch (error: any) {
+    await session.abortTransaction();
+    console.error('Transaction aborted:', error);
+    return errorResponse(res, error.message || 'Failed to complete order transaction', 500);
+  } finally {
+    session.endSession();
   }
 
   return successResponse(res, order, 'Order created successfully', 201);
@@ -248,9 +299,19 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
 export const deleteOrder = async (req: Request, res: Response) => {
   const { id } = req.params;
   const organizationId = req.user!.organizationId;
-  const order = await Order.findOneAndDelete({ _id: id, organizationId });
+  
+  const order = await Order.findOne({ _id: id, organizationId });
   if (!order) return errorResponse(res, 'Order not found', 404);
-  return successResponse(res, null, 'Order deleted successfully');
+
+  if (order.status === 'COMPLETED' || order.status === 'CANCELLED') {
+    return errorResponse(res, 'Cannot delete a completed or already cancelled order. Please cancel or refund it instead.', 400);
+  }
+
+  // Soft delete / cancel for tracking instead of physical deletion
+  order.status = 'CANCELLED';
+  await order.save();
+  
+  return successResponse(res, null, 'Order cancelled successfully');
 };
 
 export const updateOrderItemStatus = async (req: Request, res: Response) => {

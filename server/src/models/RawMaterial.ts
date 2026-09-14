@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IRawMaterial extends Document {
   organizationId: mongoose.Types.ObjectId;
+  outletId: mongoose.Types.ObjectId;
   name: string;
   description?: string;
   unit: string;
@@ -15,6 +16,7 @@ export interface IRawMaterial extends Document {
 
 const rawMaterialSchema = new Schema<IRawMaterial>(
   {
+    outletId: { type: Schema.Types.ObjectId, ref: 'Outlet', index: true },
     organizationId: {
       type: Schema.Types.ObjectId,
       ref: 'Organization',

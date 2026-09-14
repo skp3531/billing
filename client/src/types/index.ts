@@ -88,7 +88,7 @@ export interface MenuVariant {
 export interface ModifierOption {
   name: string;
   price: number;
-  isVegetarian: boolean;
+  isVeg: boolean;
 }
 
 export interface ModifierGroup {
@@ -108,7 +108,9 @@ export interface MenuItem {
   shortCode: string;
   image?: string;
   basePrice: number;
-  isVegetarian: boolean;
+  taxRate: number;
+  taxType: 'INCLUSIVE' | 'EXCLUSIVE';
+  isVeg: boolean;
   spicinessLevel: number;
   variants: MenuVariant[];
   modifierGroups: ModifierGroup[];
