@@ -19,11 +19,13 @@ export const orderApi = {
     return response.data;
   },
 
-  getOrders: async (outletId: string, options: { filter?: 'active' | 'past', status?: string, page?: number, limit?: number } = {}) => {
+  getOrders: async (outletId: string, options: { filter?: 'active' | 'past', status?: string, page?: number, limit?: number, startDate?: string, endDate?: string } = {}) => {
     const params = new URLSearchParams();
     if (outletId) params.append('outletId', outletId);
     if (options.filter) params.append('filter', options.filter);
     if (options.status) params.append('status', options.status);
+    if (options.startDate) params.append('startDate', options.startDate);
+    if (options.endDate) params.append('endDate', options.endDate);
     params.append('page', (options.page || 1).toString());
     params.append('limit', (options.limit || 50).toString());
     

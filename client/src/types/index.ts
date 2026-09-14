@@ -145,6 +145,8 @@ export interface OrderItem {
 }
 
 export interface Order {
+  priority?: 'NORMAL' | 'HIGH' | 'VIP';
+  timeline?: { status: string; timestamp: Date; by?: string; note?: string }[];
   _id: string;
   organizationId: string;
   outletId: string;

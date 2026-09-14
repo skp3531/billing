@@ -259,7 +259,7 @@ export const createOrder = async (req: Request, res: Response) => {
 
 export const getOrders = async (req: Request, res: Response) => {
   const organizationId = req.user!.organizationId;
-  const { outletId, status, filter, page = '1', limit = '50' } = req.query;
+  const { outletId, status, filter, page = '1', limit = '50', startDate, endDate } = req.query;
 
   const query: any = { organizationId };
   if (outletId) query.outletId = outletId;
@@ -270,6 +270,13 @@ export const getOrders = async (req: Request, res: Response) => {
     query.status = { $in: ['COMPLETED', 'CANCELLED'] };
   } else if (status) {
     query.status = (status as string).toUpperCase();
+  }
+  
+  if (startDate && endDate) {
+    query.createdAt = {
+      $gte: new Date(startDate as string),
+      $lte: new Date(endDate as string)
+    };
   }
 
   const pageNumber = parseInt(page as string, 10);

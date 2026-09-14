@@ -30,6 +30,8 @@ interface ICustomer {
 }
 
 export interface IOrder extends Document {
+  priority?: 'NORMAL' | 'HIGH' | 'VIP';
+  timeline?: { status: string; timestamp: Date; by?: string; note?: string }[];
   cashierId?: mongoose.Types.ObjectId;
   cashierName?: string;
   organizationId: mongoose.Types.ObjectId;
@@ -77,6 +79,7 @@ const orderItemSchema = new Schema<IOrderItem>({
   status: { type: String, enum: ['PENDING', 'PREPARED'], default: 'PENDING' },
   station: { type: String },
   notes: { type: String },
+
 });
 
 const customerSchema = new Schema<ICustomer>({
@@ -127,6 +130,8 @@ const orderSchema = new Schema<IOrder>(
     discountTotal: { type: Number, default: 0 },
     grandTotal: { type: Number, required: true },
     notes: { type: String },
+    priority: { type: String, enum: ['NORMAL', 'HIGH', 'VIP'], default: 'NORMAL' },
+    timeline: [{ status: String, timestamp: { type: Date, default: Date.now }, by: String, note: String }],
     cashierId: { type: Schema.Types.ObjectId, ref: 'User' },
     cashierName: { type: String },
   },
