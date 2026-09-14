@@ -26,7 +26,7 @@ export const KPICard: React.FC<KPICardProps> = ({
       </div>
       <div className="flex items-baseline gap-2 mt-1">
         <span className="text-2xl font-bold text-gray-900">
-          {format === 'currency' ? \`₹\${value}\` : format === 'percentage' ? \`\${value}%\` : value}
+          {format === 'currency' ? `₹${value}` : format === 'percentage' ? `${value}%` : value}
         </span>
       </div>
       
