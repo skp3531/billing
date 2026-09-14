@@ -18,7 +18,7 @@ app.use(cors({
     const additionalOrigins = process.env.ADDITIONAL_ALLOWED_ORIGINS 
       ? process.env.ADDITIONAL_ALLOWED_ORIGINS.split(',').map(url => url.trim()) 
       : [];
-    const allowedOrigins = [clientUrl, ...additionalOrigins];
+    const allowedOrigins = [clientUrl, 'https://skp3531.github.io', ...additionalOrigins];
 
     if (!origin || allowedOrigins.includes(origin)) {
       callback(null, true);
