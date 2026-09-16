@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { getPurchases, createPurchase, updatePurchaseStatus } from '../controllers/purchase.controller';
+import { getPurchases, createPurchase, updatePurchaseStatus, getProcurementAnalytics } from '../controllers/purchase.controller';
 import { authenticate } from '../middleware/authenticate';
 import { requirePermission } from '../middleware/authorize';
 import { PERMISSIONS } from '../utils/permissions';
@@ -9,8 +9,9 @@ const router = Router();
 
 router.use(authenticate);
 
-router.get('/', requirePermission(PERMISSIONS.PURCHASES_VIEW), asyncHandler(getPurchases));
-router.post('/', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_CREATE), asyncHandler(createPurchase));
-router.patch('/:id/status', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_EDIT), asyncHandler(updatePurchaseStatus));
+router.get('/analytics', requirePermission(PERMISSIONS.PURCHASES_VIEW), getProcurementAnalytics);
+router.get('/', requirePermission(PERMISSIONS.PURCHASES_VIEW), getPurchases);
+router.post('/', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_CREATE), createPurchase);
+router.patch('/:id/status', requirePermission(PERMISSIONS.PURCHASES_MANAGE, PERMISSIONS.PURCHASES_EDIT), updatePurchaseStatus);
 
 export default router;

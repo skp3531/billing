@@ -7,6 +7,9 @@ export interface ISupplier extends Document {
   email?: string;
   phone?: string;
   address?: string;
+  gstNumber?: string;
+  paymentTerms?: string;
+  outstandingBalance: number;
   active: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -25,6 +28,9 @@ const supplierSchema = new Schema<ISupplier>(
     email: { type: String },
     phone: { type: String },
     address: { type: String },
+    gstNumber: { type: String },
+    paymentTerms: { type: String },
+    outstandingBalance: { type: Number, default: 0 },
     active: { type: Boolean, default: true },
   },
   { timestamps: true }
