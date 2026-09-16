@@ -47,3 +47,13 @@ export const deleteTable = async (id: string) => {
   const response = await api.delete(`/tables/${id}`);
   return response.data;
 };
+
+export const transferTable = async (fromTableId: string, toTableId: string) => {
+  const response = await api.post('/tables/transfer', { fromTableId, toTableId });
+  return response.data;
+};
+
+export const mergeTables = async (primaryTableId: string, secondaryTableId: string) => {
+  const response = await api.post('/tables/merge', { primaryTableId, secondaryTableId });
+  return response.data;
+};

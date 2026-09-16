@@ -1,24 +1,28 @@
-import React, { useState } from 'react';
-import { Table } from '../../../api/table.api';
-import { Plus, Grid2X2, Circle, RectangleHorizontal, Users, Clock, Receipt, RefreshCcw, Merge, SplitSquareHorizontal, UserX, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Table, transferTable, mergeTables } from '../../../api/table.api';
+import { Plus, Grid2X2, Circle, RectangleHorizontal, Users, Clock, Receipt, RefreshCcw, Merge, SplitSquareHorizontal, UserX, X, ArrowRight, CheckCircle2 } from 'lucide-react';
 import clsx from 'clsx';
 import { toast } from 'react-hot-toast';
 
 interface TableSidebarProps {
   table?: Table | null;
+  allTables?: Table[];
   onClose?: () => void;
   onStatusChange?: (id: string, status: Table['status']) => void;
   onUpdate?: () => void;
-  // Edit mode props
   isEditMode?: boolean;
   onAddTable?: (tableData: Partial<Table>) => void;
 }
 
-export const TableSidebar = ({ table, onClose, onStatusChange, onUpdate, isEditMode, onAddTable }: TableSidebarProps) => {
+export const TableSidebar = ({ table, allTables = [], onClose, onStatusChange, onUpdate, isEditMode, onAddTable }: TableSidebarProps) => {
   const [name, setName] = useState('');
   const [capacity, setCapacity] = useState('4');
   const [shape, setShape] = useState<'square' | 'rectangle' | 'circle'>('square');
   const [floorPlan, setFloorPlan] = useState('Main Dining');
+
+  // Operation States
+  const [opMode, setOpMode] = useState<'none' | 'transfer' | 'merge'>('none');
+  const [isProcessing, setIsProcessing] = useState(false);
 
   const handleAdd = () => {
     if (!name || !onAddTable) return toast.error('Table name is required');
@@ -35,6 +39,37 @@ export const TableSidebar = ({ table, onClose, onStatusChange, onUpdate, isEditM
       status: 'AVAILABLE'
     });
     setName('');
+  };
+
+  const handleTransfer = async (toTableId: string) => {
+    if (!table) return;
+    setIsProcessing(true);
+    try {
+      await transferTable(table._id, toTableId);
+      toast.success(`Transferred to new table`);
+      setOpMode('none');
+      if (onUpdate) onUpdate();
+      if (onClose) onClose();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Transfer failed');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleMerge = async (secondaryTableId: string) => {
+    if (!table) return;
+    setIsProcessing(true);
+    try {
+      await mergeTables(table._id, secondaryTableId);
+      toast.success(`Tables merged successfully`);
+      setOpMode('none');
+      if (onUpdate) onUpdate();
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Merge failed');
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isEditMode) {
@@ -94,84 +129,151 @@ export const TableSidebar = ({ table, onClose, onStatusChange, onUpdate, isEditM
             </div>
           </div>
           {onClose && (
-            <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
+            <button onClick={() => { setOpMode('none'); onClose(); }} className="p-2 hover:bg-gray-200 rounded-full text-gray-500 transition-colors">
               <X className="w-6 h-6" />
             </button>
           )}
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Table Metrics */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <Users className="w-5 h-5 text-indigo-500 mb-2" />
-              <p className="text-xs font-bold text-gray-500 uppercase">Guests</p>
-              <p className="text-xl font-black text-gray-900">{table.guestsSeated || 0} <span className="text-sm text-gray-400">/ {table.capacity}</span></p>
-            </div>
-            <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
-              <Clock className="w-5 h-5 text-indigo-500 mb-2" />
-              <p className="text-xs font-bold text-gray-500 uppercase">Occupied Time</p>
-              <p className="text-xl font-black text-gray-900">{table.occupiedSince ? '45m' : '--'}</p>
-            </div>
-            <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 col-span-2 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-bold text-amber-600 uppercase mb-0.5">Live Bill</p>
-                <p className="text-2xl font-black text-amber-900">₹{table.currentOrderId ? '1,450.00' : '0.00'}</p>
+          
+          {opMode === 'transfer' && (
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 animate-in slide-in-from-right-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-indigo-900">Transfer Order To:</h3>
+                <button onClick={() => setOpMode('none')} className="text-indigo-500 hover:text-indigo-700 text-sm font-bold border border-indigo-200 px-2 py-1 rounded-lg">Cancel</button>
               </div>
-              <Receipt className="w-8 h-8 text-amber-500 opacity-50" />
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {allTables.filter(t => t._id !== table._id && t.status === 'AVAILABLE').map(t => (
+                  <button 
+                    key={t._id} 
+                    disabled={isProcessing}
+                    onClick={() => handleTransfer(t._id)}
+                    className="w-full flex items-center justify-between bg-white border border-indigo-100 p-3 rounded-xl hover:border-indigo-400 transition-all text-left group"
+                  >
+                    <div>
+                      <p className="font-bold text-gray-900">{t.name}</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.floorPlan} • Cap: {t.capacity}</p>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-indigo-300 group-hover:text-indigo-600 transition-colors" />
+                  </button>
+                ))}
+                {allTables.filter(t => t._id !== table._id && t.status === 'AVAILABLE').length === 0 && (
+                  <p className="text-sm text-indigo-600/70 italic p-2 text-center">No available tables found.</p>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Quick Actions */}
-          <div>
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-3">Quick Actions</h3>
-            <div className="grid grid-cols-2 gap-2">
-              <button 
-                onClick={() => { if(onStatusChange) onStatusChange(table._id, 'OCCUPIED') }}
-                className="p-3 bg-gray-50 hover:bg-rose-50 hover:text-rose-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100"
-              >
-                Seat Guests
-              </button>
-              <button 
-                onClick={() => { if(onStatusChange) onStatusChange(table._id, 'CLEANING') }}
-                className="p-3 bg-gray-50 hover:bg-orange-50 hover:text-orange-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100"
-              >
-                Mark Cleaning
-              </button>
-              <button 
-                onClick={() => { if(onStatusChange) onStatusChange(table._id, 'AVAILABLE') }}
-                className="p-3 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100 col-span-2"
-              >
-                Free Table
-              </button>
+          {opMode === 'merge' && (
+            <div className="bg-indigo-50 border border-indigo-100 rounded-2xl p-4 animate-in slide-in-from-right-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-black text-indigo-900">Merge with Table:</h3>
+                <button onClick={() => setOpMode('none')} className="text-indigo-500 hover:text-indigo-700 text-sm font-bold border border-indigo-200 px-2 py-1 rounded-lg">Cancel</button>
+              </div>
+              <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
+                {allTables.filter(t => t._id !== table._id).map(t => (
+                  <button 
+                    key={t._id} 
+                    disabled={isProcessing}
+                    onClick={() => handleMerge(t._id)}
+                    className="w-full flex items-center justify-between bg-white border border-indigo-100 p-3 rounded-xl hover:border-indigo-400 transition-all text-left group"
+                  >
+                    <div>
+                      <p className="font-bold text-gray-900">{t.name}</p>
+                      <p className="text-xs text-gray-500 font-medium">{t.floorPlan} • {t.status}</p>
+                    </div>
+                    <CheckCircle2 className="w-5 h-5 text-indigo-300 group-hover:text-indigo-600 transition-colors" />
+                  </button>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Advanced Ops */}
-          <div>
-            <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-3">Table Operations</h3>
-            <div className="space-y-2">
-              <button className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors">
-                <RefreshCcw className="w-5 h-5 text-indigo-500" /> Transfer Table
-              </button>
-              <button className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors">
-                <Merge className="w-5 h-5 text-indigo-500" /> Merge Tables
-              </button>
-              <button className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors">
-                <SplitSquareHorizontal className="w-5 h-5 text-indigo-500" /> Split Bill
-              </button>
-              <button className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors">
-                <UserX className="w-5 h-5 text-indigo-500" /> Assign Waiter
-              </button>
-            </div>
-          </div>
+          {opMode === 'none' && (
+            <>
+              {/* Table Metrics */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <Users className="w-5 h-5 text-indigo-500 mb-2" />
+                  <p className="text-xs font-bold text-gray-500 uppercase">Guests</p>
+                  <p className="text-xl font-black text-gray-900">{table.guestsSeated || 0} <span className="text-sm text-gray-400">/ {table.capacity}</span></p>
+                </div>
+                <div className="bg-gray-50 rounded-2xl p-4 border border-gray-100">
+                  <Clock className="w-5 h-5 text-indigo-500 mb-2" />
+                  <p className="text-xs font-bold text-gray-500 uppercase">Occupied</p>
+                  <p className="text-xl font-black text-gray-900">{table.occupiedSince ? 'Active' : '--'}</p>
+                </div>
+                <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100 col-span-2 flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-bold text-amber-600 uppercase mb-0.5">Live Bill</p>
+                    <p className="text-2xl font-black text-amber-900">₹{table.currentOrderId ? 'View in POS' : '0.00'}</p>
+                  </div>
+                  <Receipt className="w-8 h-8 text-amber-500 opacity-50" />
+                </div>
+              </div>
+
+              {/* Quick Actions */}
+              <div>
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-3">Quick Actions</h3>
+                <div className="grid grid-cols-2 gap-2">
+                  <button 
+                    onClick={() => { if(onStatusChange) onStatusChange(table._id, 'OCCUPIED') }}
+                    className="p-3 bg-gray-50 hover:bg-rose-50 hover:text-rose-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100"
+                  >
+                    Seat Guests
+                  </button>
+                  <button 
+                    onClick={() => { if(onStatusChange) onStatusChange(table._id, 'CLEANING') }}
+                    className="p-3 bg-gray-50 hover:bg-orange-50 hover:text-orange-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100"
+                  >
+                    Mark Cleaning
+                  </button>
+                  <button 
+                    onClick={() => { if(onStatusChange) onStatusChange(table._id, 'AVAILABLE') }}
+                    className="p-3 bg-gray-50 hover:bg-emerald-50 hover:text-emerald-700 text-gray-700 rounded-xl font-bold text-sm text-center transition-colors border border-gray-100 col-span-2"
+                  >
+                    Free Table
+                  </button>
+                </div>
+              </div>
+
+              {/* Advanced Ops */}
+              <div>
+                <h3 className="text-sm font-black text-gray-900 uppercase tracking-wider mb-3">Table Operations</h3>
+                <div className="space-y-2">
+                  <button 
+                    onClick={() => {
+                      if (!table.currentOrderId) return toast.error('Table has no active order to transfer');
+                      setOpMode('transfer');
+                    }}
+                    className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors"
+                  >
+                    <RefreshCcw className="w-5 h-5 text-indigo-500" /> Transfer Table
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (!table.currentOrderId) return toast.error('Table has no active order to merge into');
+                      setOpMode('merge');
+                    }}
+                    className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors"
+                  >
+                    <Merge className="w-5 h-5 text-indigo-500" /> Merge Tables
+                  </button>
+                  <button className="w-full p-3 bg-white border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 text-gray-700 rounded-xl font-bold text-sm flex items-center gap-3 transition-colors opacity-50 cursor-not-allowed">
+                    <SplitSquareHorizontal className="w-5 h-5 text-indigo-500" /> Split Bill (Coming Soon)
+                  </button>
+                </div>
+              </div>
+            </>
+          )}
         </div>
         
         {/* POS Button */}
         <div className="p-4 bg-gray-50 border-t border-gray-200">
-          <button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
+          <a href={`/pos?table=${table.name}`} className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-4 rounded-xl font-black text-lg shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2">
              Open in POS →
-          </button>
+          </a>
         </div>
       </div>
     );

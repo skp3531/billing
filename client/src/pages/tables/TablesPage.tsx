@@ -195,6 +195,7 @@ export default function TablesPage() {
       {(selectedTableForSidebar || isEditMode) && (
         <TableSidebar 
           table={selectedTableForSidebar}
+          allTables={tables}
           isEditMode={isEditMode}
           onAddTable={async (data) => {
             try {

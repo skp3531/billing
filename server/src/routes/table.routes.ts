@@ -7,6 +7,8 @@ import {
   updateTable,
   deleteTable,
   getTableDashboard,
+  transferTable,
+  mergeTables,
 } from '../controllers/table.controller';
 import { authenticate } from '../middleware/authenticate';
 import { requirePermission } from '../middleware/authorize';
@@ -19,6 +21,8 @@ router.use(authenticate);
 // Basic CRUD operations (require pos.manage or tables.manage permission - assuming pos.manage for simplicity here, adjust as needed based on your permissions structure)
 router.post('/', requirePermission('pos.manage'), createTable);
 router.get('/dashboard', getTableDashboard);
+router.post('/transfer', transferTable);
+router.post('/merge', mergeTables);
 
 router.get('/', getTables); // Anyone authenticated can view tables usually (for taking orders)
 router.get('/:id', getTableById);
