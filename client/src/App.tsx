@@ -27,6 +27,7 @@ import PermissionGuard from './components/guards/PermissionGuard';
 import POSPage from './pages/pos/POSPage';
 import OrdersPage from './pages/orders/OrdersPage';
 import TablesPage from './pages/tables/TablesPage';
+import ReservationsPage from './pages/reservations/ReservationsPage';
 import KitchenPage from './pages/kitchen/KitchenPage';
 import CustomersPage from './pages/customers/CustomersPage';
 import ExpensesPage from './pages/expenses/ExpensesPage';

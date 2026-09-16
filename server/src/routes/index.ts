@@ -15,6 +15,8 @@ import purchaseRoutes from './purchase.routes';
 import customerRoutes from './customer.routes';
 import expenseRoutes from './expense.routes';
 import printerRoutes from './printer.routes';
+import reservationRoutes from './reservation.routes';
+import waitlistRoutes from './waitlist.routes';
 
 import { requireOutletAccess } from '../middleware/requireOutletAccess';
 import { authenticate } from '../middleware/authenticate';
@@ -41,5 +43,7 @@ router.use('/purchases', purchaseRoutes);
 router.use('/customers', customerRoutes);
 router.use('/expenses', expenseRoutes);
 router.use('/printers', printerRoutes);
+router.use('/reservations', reservationRoutes);
+router.use('/waitlist', waitlistRoutes);
 
 export default router;

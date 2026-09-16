@@ -6,13 +6,14 @@ import { clsx } from 'clsx';
 import { 
   HomeIcon, ShoppingCartIcon, ClipboardDocumentListIcon, RectangleGroupIcon, 
   FireIcon, BookOpenIcon, ArchiveBoxIcon, TruckIcon, BuildingStorefrontIcon, 
-  UsersIcon, UserGroupIcon, CreditCardIcon, ChartBarIcon, CogIcon, XMarkIcon 
+  UsersIcon, UserGroupIcon, CreditCardIcon, ChartBarIcon, CogIcon, XMarkIcon, CalendarIcon 
 } from '@heroicons/react/24/outline';
 
 export const navItems = [
   { name: 'Dashboard', path: '/dashboard', icon: HomeIcon, permission: 'dashboard.view' },
   { name: 'POS', path: '/pos', icon: ShoppingCartIcon, permission: 'pos.view' },
   { name: 'Orders', path: '/orders', icon: ClipboardDocumentListIcon, permission: 'orders.view' },
+  { name: 'Reservations', path: '/reservations', icon: CalendarIcon },
   { name: 'Tables', path: '/tables', icon: RectangleGroupIcon, permission: 'pos.view' },
   { name: 'Kitchen', path: '/kitchen', icon: FireIcon, permission: 'kitchen.view' },
   { name: 'Menu', path: '/menu', icon: BookOpenIcon, permission: 'menu.view' },

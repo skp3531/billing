@@ -157,7 +157,7 @@ const SettingsPage = () => {
       {activeTab === 'apps' && (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {visibleApps.map(app => (
-            <Link key={app.name} to={app.path} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-500 transition-all group">
+            <Link key={app.name} to={app.path || '/'} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-500 transition-all group">
               <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:bg-amber-100 transition-colors">
                 <app.icon className="w-6 h-6" />
               </div>
