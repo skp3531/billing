@@ -1,24 +1,36 @@
 import api from './axios';
 
 export interface Table {
-  floorPlan?: string;
-  shape?: 'square' | 'rectangle' | 'circle';
-  positionX?: number;
-  positionY?: number;
-  currentOrderId?: string;
   _id: string;
   organizationId: string;
   outletId?: string;
   name: string;
   capacity: number;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
+  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'BILLING_PENDING' | 'CLEANING' | 'DISABLED';
+  floorPlan?: string;
+  shape?: 'square' | 'rectangle' | 'circle';
+  positionX?: number;
+  positionY?: number;
+  rotation?: number;
+  width?: number;
+  height?: number;
+  currentOrderId?: string;
+  assignedWaiterId?: string;
+  guestsSeated?: number;
+  occupiedSince?: string;
+  linkedOrderIds?: string[];
   createdAt: string;
   updatedAt: string;
 }
 
 export const getTables = async () => {
   const response = await api.get('/tables');
-  return response.data;
+  return response.data?.data || response.data;
+};
+
+export const getTableDashboard = async () => {
+  const response = await api.get('/tables/dashboard');
+  return response.data?.data || response.data;
 };
 
 export const createTable = async (data: Partial<Table>) => {
