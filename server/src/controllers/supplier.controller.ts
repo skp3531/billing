@@ -41,3 +41,17 @@ export const deleteSupplier = async (req: Request, res: Response) => {
   if (!supplier) return errorResponse(res, 'Supplier not found', 404);
   return successResponse(res, null, 'Supplier deleted successfully');
 };
+
+export const logPayment = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const organizationId = req.user!.organizationId;
+  const { amount } = req.body;
+
+  const supplier = await Supplier.findOne({ _id: id, organizationId });
+  if (!supplier) return errorResponse(res, 'Supplier not found', 404);
+
+  supplier.outstandingBalance -= amount;
+  await supplier.save();
+
+  return successResponse(res, supplier, 'Payment logged successfully');
+};
