@@ -8,6 +8,7 @@ import {
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
 import { Link } from 'react-router-dom';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 
 export default function DashboardPage() {
   const { user, currentOutlet } = useAuthStore();
@@ -188,24 +189,80 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        
+      {/* SALES TREND CHART */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+        <h2 className="text-lg font-black text-gray-900 mb-6 flex items-center gap-2"><BarChart2 className="w-5 h-5 text-indigo-500" /> Sales Performance Trend</h2>
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data?.salesTrend || []} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e5e7eb" />
+              <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} dy={10} />
+              <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#6b7280' }} tickFormatter={(val) => `₹${val}`} />
+              <RechartsTooltip 
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Revenue']}
+              />
+              <Area type="monotone" dataKey="sales" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+
         {/* TOP ITEMS & AI INSIGHTS */}
         <div className="col-span-1 lg:col-span-2 space-y-6">
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
                <h2 className="text-lg font-black text-gray-900 mb-4">Top Selling Items</h2>
-               <div className="space-y-4">
-                 {data?.topItems?.slice(0,5).map((item: any, i: number) => (
-                   <div key={i} className="flex justify-between items-center border-b border-gray-50 pb-2 last:border-0">
-                     <div>
-                       <p className="font-bold text-gray-900 text-sm">{item.name}</p>
-                       <p className="text-xs text-gray-500 font-bold">{item.qty} units sold</p>
+               
+               <div className="flex-1 flex items-center justify-center min-h-[200px]">
+                 {Object.keys(data?.paymentMethods || {}).length > 0 ? (
+                   <ResponsiveContainer width="100%" height={200}>
+                     <PieChart>
+                       <Pie
+                         data={Object.entries(data?.paymentMethods || {}).map(([name, value]) => ({ name, value }))}
+                         cx="50%"
+                         cy="50%"
+                         innerRadius={60}
+                         outerRadius={80}
+                         paddingAngle={5}
+                         dataKey="value"
+                       >
+                         {Object.entries(data?.paymentMethods || {}).map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b', '#ef4444'][index % 4]} />
+                         ))}
+                       </Pie>
+                       <RechartsTooltip 
+                          formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Amount']}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                       />
+                     </PieChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <p className="text-sm text-gray-500 italic">No payments received.</p>
+                 )}
+               </div>
+               
+               <div className="grid grid-cols-2 gap-2 mt-4">
+                 {Object.entries(data?.paymentMethods || {}).map(([method, amount]: any, i) => (
+                   <div key={method} className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'][i % 4] }}></span>
+                       <span className="text-xs font-bold text-gray-700 uppercase">{method}</span>
                      </div>
-                     <span className="font-black text-indigo-600">₹{item.revenue.toLocaleString()}</span>
+                     <span className="text-xs font-black text-gray-900">₹{amount.toLocaleString()}</span>
                    </div>
                  ))}
-                 {data?.topItems?.length === 0 && <p className="text-sm text-gray-500 italic">No sales data for this period.</p>}
                </div>
+</div>
             </div>
             
             <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col">
@@ -249,27 +306,51 @@ export default function DashboardPage() {
                </div>
             </div>
             
-            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm">
+            <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex flex-col">
                <h2 className="text-lg font-black text-gray-900 mb-4">Payment Methods</h2>
-               <div className="space-y-4">
-                 {Object.entries(data?.paymentMethods || {}).map(([method, amount]: any) => (
-                   <div key={method}>
-                     <div className="flex justify-between items-center mb-1">
-                       <span className="text-sm font-bold text-gray-700 uppercase">{method}</span>
-                       <span className="text-sm font-black text-gray-900">₹{amount.toLocaleString()}</span>
+               <div className="flex-1 flex flex-col justify-center min-h-[200px]">
+                 {Object.keys(data?.paymentMethods || {}).length > 0 ? (
+                   <ResponsiveContainer width="100%" height={200}>
+                     <PieChart>
+                       <Pie
+                         data={Object.entries(data?.paymentMethods || {}).map(([name, value]) => ({ name, value }))}
+                         cx="50%"
+                         cy="50%"
+                         innerRadius={60}
+                         outerRadius={80}
+                         paddingAngle={5}
+                         dataKey="value"
+                       >
+                         {Object.entries(data?.paymentMethods || {}).map((entry, index) => (
+                           <Cell key={`cell-${index}`} fill={['#6366f1', '#10b981', '#f59e0b', '#ef4444'][index % 4]} />
+                         ))}
+                       </Pie>
+                       <RechartsTooltip 
+                          formatter={(value: any) => [`₹${Number(value).toLocaleString()}`, 'Amount']}
+                          contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                       />
+                     </PieChart>
+                   </ResponsiveContainer>
+                 ) : (
+                   <p className="text-sm text-gray-500 italic text-center">No payments received.</p>
+                 )}
+               </div>
+               
+               <div className="grid grid-cols-2 gap-2 mt-4">
+                 {Object.entries(data?.paymentMethods || {}).map(([method, amount]: any, i) => (
+                   <div key={method} className="bg-gray-50 p-2 rounded-lg border border-gray-100 flex justify-between items-center">
+                     <div className="flex items-center gap-2">
+                       <span className="w-3 h-3 rounded-full" style={{ backgroundColor: ['#6366f1', '#10b981', '#f59e0b', '#ef4444'][i % 4] }}></span>
+                       <span className="text-xs font-bold text-gray-700 uppercase">{method}</span>
                      </div>
-                     <div className="w-full bg-gray-100 rounded-full h-2">
-                       <div className="bg-indigo-500 h-2 rounded-full" style={{ width: `${Math.min((amount / data?.kpis?.grossSales?.value) * 100, 100)}%` }}></div>
-                     </div>
+                     <span className="text-xs font-black text-gray-900">₹{amount.toLocaleString()}</span>
                    </div>
                  ))}
-                 {Object.keys(data?.paymentMethods || {}).length === 0 && <p className="text-sm text-gray-500 italic">No payments received.</p>}
                </div>
             </div>
           </div>
 
         </div>
       </div>
-    </div>
-  );
+      );
 }

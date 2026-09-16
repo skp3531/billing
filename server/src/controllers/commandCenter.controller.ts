@@ -171,6 +171,34 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
     const topItems = Object.values(itemSales).sort((a: any, b: any) => b.qty - a.qty).slice(0, 10);
     const lowItems = Object.values(itemSales).sort((a: any, b: any) => a.qty - b.qty).slice(0, 10);
 
+    
+    // Sales Trend (Hourly if Today/Yesterday, Daily otherwise)
+    const salesTrend: any[] = [];
+    if (filter === 'today' || filter === 'yesterday') {
+      // Hourly grouping
+      const hourlyData: any = {};
+      for(let i=0; i<24; i++) hourlyData[i] = 0;
+      currentOrders.forEach(o => {
+        if(o.status === 'PAID' || o.paymentStatus === 'PAID') {
+          const hour = new Date(o.createdAt).getHours();
+          hourlyData[hour] += o.grandTotal || o.totalAmount || 0;
+        }
+      });
+      for(let i=0; i<24; i++) {
+        salesTrend.push({ name: `${i}:00`, sales: hourlyData[i] });
+      }
+    } else {
+      // Daily grouping
+      const dailyData: any = {};
+      currentOrders.forEach(o => {
+        if(o.status === 'PAID' || o.paymentStatus === 'PAID') {
+          const dateStr = new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+          dailyData[dateStr] = (dailyData[dateStr] || 0) + (o.grandTotal || o.totalAmount || 0);
+        }
+      });
+      Object.keys(dailyData).forEach(k => salesTrend.push({ name: k, sales: dailyData[k] }));
+    }
+
     // 6. AI Insights (Rule-based generation)
     const insights = [];
     if (topItems.length > 0) insights.push(`"${(topItems[0] as any).name}" generated highest revenue today.`);
@@ -190,6 +218,7 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
         topItems,
         lowItems,
         insights,
+        salesTrend,
         tableSummary: {
           total: allTables.length,
           occupied: allTables.filter(t => t.status === 'OCCUPIED').length,
