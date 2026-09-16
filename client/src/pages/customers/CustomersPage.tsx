@@ -1,31 +1,31 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
+import React, { useState, useEffect } from 'react';
+import { PlusIcon, PencilIcon, TrashIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Users, Star, Gift, Crown, BadgeIndianRupee, Search, Filter } from 'lucide-react';
 import { useForm } from 'react-hook-form';
-import { PlusIcon, XMarkIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { toast } from 'react-hot-toast';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../../api/customer.api';
-import { Customer } from '../../types';
+import clsx from 'clsx';
 
-interface CustomerFormData {
-  name: string;
-  phone: string;
-  email: string;
-  loyaltyPoints: number;
-}
-
-const CustomersPage = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [editingCustomer, setEditingCustomer] = useState<any | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<CustomerFormData>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm();
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
 
   const fetchCustomers = async () => {
-    setLoading(true);
     try {
+      setLoading(true);
       const data = await getCustomers();
-      setCustomers(data || []);
+      setCustomers(data);
     } catch {
       toast.error('Failed to load customers');
     } finally {
@@ -33,207 +33,195 @@ const CustomersPage = () => {
     }
   };
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
-
   const openCreateModal = () => {
     setEditingCustomer(null);
-    reset({ name: '', phone: '', email: '', loyaltyPoints: 0 });
+    reset({ name: '', phone: '', email: '', loyaltyPoints: 0, tier: 'BRONZE' });
     setIsModalOpen(true);
   };
 
-  const openEditModal = (customer: Customer) => {
+  const openEditModal = (customer: any) => {
     setEditingCustomer(customer);
-    reset({
-      name: customer.name,
-      phone: customer.phone || '',
-      email: customer.email || '',
-      loyaltyPoints: customer.loyaltyPoints || 0
-    });
+    reset(customer);
     setIsModalOpen(true);
   };
 
-  const onSubmit = async (data: CustomerFormData) => {
-    setSubmitting(true);
+  const onSubmit = async (data: any) => {
     try {
+      setSubmitting(true);
       if (editingCustomer) {
-        await updateCustomer(editingCustomer._id, { ...data, loyaltyPoints: Number(data.loyaltyPoints) });
-        toast.success('Customer updated successfully');
+        await updateCustomer(editingCustomer._id, data);
+        toast.success('CRM profile updated');
       } else {
-        await createCustomer({ ...data, loyaltyPoints: Number(data.loyaltyPoints) });
-        toast.success('Customer added successfully');
+        await createCustomer(data);
+        toast.success('Customer added to CRM');
       }
       setIsModalOpen(false);
-      reset();
       fetchCustomers();
     } catch {
-      toast.error(editingCustomer ? 'Failed to update customer' : 'Failed to add customer');
+      toast.error('Failed to save customer');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this customer?')) return;
+    if (!confirm('Remove this customer from the CRM?')) return;
     try {
       await deleteCustomer(id);
-      toast.success('Customer deleted successfully');
+      toast.success('Customer deleted');
       fetchCustomers();
     } catch {
       toast.error('Failed to delete customer');
     }
   };
 
+  const TierBadge = ({ tier }: { tier: string }) => {
+    const config: any = {
+      PLATINUM: { color: 'bg-slate-800 text-slate-100 border-slate-600', icon: Crown },
+      GOLD: { color: 'bg-amber-100 text-amber-700 border-amber-300', icon: Star },
+      SILVER: { color: 'bg-gray-100 text-gray-700 border-gray-300', icon: Star },
+      BRONZE: { color: 'bg-orange-50 text-orange-700 border-orange-200', icon: Star },
+    };
+    const c = config[tier] || config.BRONZE;
+    const Icon = c.icon;
+    return (
+      <span className={clsx("flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded border uppercase", c.color)}>
+        <Icon className="w-3 h-3" /> {tier}
+      </span>
+    );
+  };
+
+  const filteredCustomers = customers.filter(c => 
+    c.name?.toLowerCase().includes(search.toLowerCase()) || 
+    c.phone?.includes(search)
+  );
+
   return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50 flex-col">
+      <div className="bg-white border-b border-gray-200 p-6 flex justify-between items-center sticky top-0 z-10 shrink-0">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Customers</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage your customers and loyalty points</p>
+          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2"><Users className="w-6 h-6 text-indigo-600" /> CRM & Loyalty Center</h1>
+          <p className="text-gray-500 font-bold mt-1 text-sm">Manage guest relationships, VIP tiers, and points</p>
         </div>
-        <button
-          onClick={openCreateModal}
-          className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors text-sm font-medium"
-        >
-          <PlusIcon className="w-5 h-5" />
-          Add Customer
-        </button>
+        
+        <div className="flex items-center gap-4">
+          <div className="relative">
+            <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search by name or phone..." 
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              className="pl-10 pr-4 py-2 bg-gray-100 border-none rounded-xl font-bold text-sm focus:ring-2 focus:ring-indigo-500 outline-none w-64"
+            />
+          </div>
+          <button className="p-2 text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 rounded-xl transition-colors"><Filter className="w-5 h-5" /></button>
+          <button onClick={openCreateModal} className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 shadow-md">
+            <PlusIcon className="w-5 h-5"/> New Guest
+          </button>
+        </div>
       </div>
 
-      {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
-        </div>
-      ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-[650px] w-full text-left text-sm text-gray-500">
-              <thead className="bg-gray-50 text-xs uppercase text-gray-700">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Name</th>
-                  <th className="px-6 py-4 font-medium">Phone</th>
-                  <th className="px-6 py-4 font-medium">Email</th>
-                  <th className="px-6 py-4 font-medium">Total Spent</th>
-                  <th className="px-6 py-4 font-medium">Loyalty Points</th>
-                  <th className="px-6 py-4 font-medium">Joined Date</th>
-                  <th className="px-6 py-4 font-medium text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {customers.map((customer) => (
-                  <tr key={customer._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 font-medium text-gray-900">{customer.name}</td>
-                    <td className="px-6 py-4">{customer.phone || '-'}</td>
-                    <td className="px-6 py-4">{customer.email || '-'}</td>
-                    <td className="px-6 py-4">₹{customer.totalSpent.toFixed(2)}</td>
-                    <td className="px-6 py-4">
-                      <span className="bg-amber-100 text-amber-800 text-xs font-medium px-2.5 py-0.5 rounded">
-                        {customer.loyaltyPoints || 0} pts
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">{new Date(customer.createdAt).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEditModal(customer)}
-                          className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
-                          title="Edit Customer"
-                        >
-                          <PencilIcon className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(customer._id)}
-                          className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                          title="Delete Customer"
-                        >
-                          <TrashIcon className="w-5 h-5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {customers.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
-                      No customers found
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      <div className="flex-1 overflow-y-auto p-8">
+        {loading ? (
+          <div className="text-center font-bold text-gray-400 mt-20">Loading CRM Database...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {filteredCustomers.map(customer => (
+              <div key={customer._id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 hover:border-indigo-300 hover:shadow-md transition-all group">
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h3 className="font-black text-lg text-gray-900 line-clamp-1">{customer.name}</h3>
+                    <p className="text-sm font-bold text-gray-500">{customer.phone || 'No phone'}</p>
+                  </div>
+                  <TierBadge tier={customer.tier} />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-gray-50 rounded-xl p-3 border border-gray-100">
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1 flex items-center gap-1"><BadgeIndianRupee className="w-3 h-3"/> LTV</p>
+                    <p className="font-black text-gray-900">₹{(customer.totalSpent || 0).toLocaleString()}</p>
+                  </div>
+                  <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                    <p className="text-xs font-bold text-indigo-400 uppercase tracking-wider mb-1 flex items-center gap-1"><Gift className="w-3 h-3"/> Points</p>
+                    <p className="font-black text-indigo-700">{customer.loyaltyPoints || 0}</p>
+                  </div>
+                </div>
+                
+                <div className="flex justify-between items-center text-xs font-bold text-gray-400 mb-4">
+                  <span>Visits: {customer.visitCount || 0}</span>
+                  <span>Last: {customer.lastVisit ? new Date(customer.lastVisit).toLocaleDateString() : 'Never'}</span>
+                </div>
 
+                <div className="flex justify-between items-center pt-4 border-t border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openEditModal(customer)} className="text-indigo-600 hover:text-indigo-800 font-bold text-sm flex items-center gap-1"><PencilIcon className="w-4 h-4"/> Edit</button>
+                  <button onClick={() => handleDelete(customer._id)} className="text-rose-500 hover:text-rose-700 font-bold text-sm flex items-center gap-1"><TrashIcon className="w-4 h-4"/> Delete</button>
+                </div>
+              </div>
+            ))}
+            
+            {filteredCustomers.length === 0 && (
+              <div className="col-span-full py-20 text-center">
+                <Users className="w-16 h-16 text-gray-200 mx-auto mb-4" />
+                <h3 className="text-xl font-black text-gray-900">No Customers Found</h3>
+                <p className="text-gray-500 font-bold mt-2">Adjust your search or add a new guest.</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CRM Edit Modal */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="bg-white rounded-2xl w-full max-w-md shadow-xl overflow-hidden">
-            <div className="flex justify-between items-center p-6 border-b border-gray-100">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {editingCustomer ? 'Edit Customer' : 'Add Customer'}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden border border-gray-200">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50">
+              <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
+                <Users className="w-5 h-5 text-indigo-600" />
+                {editingCustomer ? 'Update Profile' : 'New CRM Record'}
               </h2>
-              <button
-                onClick={() => { setIsModalOpen(false); reset(); }}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
-              >
+              <button onClick={() => setIsModalOpen(false)} className="text-gray-400 hover:text-gray-900 transition-colors">
                 <XMarkIcon className="w-6 h-6" />
               </button>
             </div>
+            
             <form onSubmit={handleSubmit(onSubmit)} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
-                <input
-                  {...register('name', { required: 'Name is required' })}
-                  className="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                  placeholder="e.g. John Doe"
-                />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                <input
-                  {...register('phone')}
-                  className="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                  placeholder="e.g. +91 9876543210"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Guest Name</label>
+                  <input {...register('name', { required: true })} className="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="e.g. John Doe" />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Phone Number</label>
+                  <input {...register('phone')} className="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="+91..." />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Email Address</label>
+                  <input type="email" {...register('email')} className="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="@" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Loyalty Points</label>
+                  <input type="number" {...register('loyaltyPoints', { valueAsNumber: true })} className="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 font-black text-indigo-600 focus:ring-2 focus:ring-indigo-500 outline-none" />
+                </div>
+                
+                <div>
+                  <label className="block text-xs font-bold text-gray-500 uppercase mb-1">VIP Tier</label>
+                  <select {...register('tier')} className="w-full rounded-xl bg-gray-50 border border-gray-200 px-4 py-3 font-bold focus:ring-2 focus:ring-indigo-500 outline-none">
+                    <option value="BRONZE">Bronze</option>
+                    <option value="SILVER">Silver</option>
+                    <option value="GOLD">Gold</option>
+                    <option value="PLATINUM">Platinum</option>
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  {...register('email')}
-                  className="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                  placeholder="e.g. john@example.com"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Loyalty Points</label>
-                <input
-                  type="number"
-                  {...register('loyaltyPoints', { valueAsNumber: true, min: 0 })}
-                  className="w-full rounded-lg border-gray-300 border px-4 py-2 focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none"
-                  placeholder="0"
-                />
-              </div>
-
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => { setIsModalOpen(false); reset(); }}
-                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="flex-1 px-4 py-2 text-white bg-amber-600 hover:bg-amber-700 rounded-lg font-medium transition-colors disabled:opacity-50"
-                >
-                  {submitting ? 'Saving...' : editingCustomer ? 'Update' : 'Save Customer'}
+              <div className="pt-6 flex gap-3">
+                <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-3 bg-white border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-colors">Cancel</button>
+                <button type="submit" disabled={submitting} className="flex-1 py-3 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors disabled:opacity-50">
+                  {submitting ? 'Saving...' : 'Save Profile'}
                 </button>
               </div>
             </form>
@@ -242,6 +230,4 @@ const CustomersPage = () => {
       )}
     </div>
   );
-};
-
-export default CustomersPage;
+}

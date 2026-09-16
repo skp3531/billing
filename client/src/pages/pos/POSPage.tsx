@@ -156,6 +156,7 @@ const POSPage = () => {
         paymentMethod: method,
         splitPayments: splits,
         paymentStatus: (method === 'PENDING' ? 'UNPAID' : 'PAID') as any,
+        customerId: customer?._id,
         customer: customer ? { name: customer.name, phone: customer.phone } : undefined,
         items: cart.map(c => ({
           menuItemId: c.menuItem._id,
@@ -212,7 +213,7 @@ const POSPage = () => {
           subtotal={subtotal}
           taxTotal={taxTotal}
           grandTotal={grandTotal}
-          customerName={customer?.name || ''}
+          customer={customer}
           onOpenCustomerModal={() => setShowCustomer(true)}
         />
       </div>

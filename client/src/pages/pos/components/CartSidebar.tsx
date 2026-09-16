@@ -22,13 +22,13 @@ interface CartSidebarProps {
   subtotal: number;
   taxTotal: number;
   grandTotal: number;
-  customerName: string;
+  customer: any;
   onOpenCustomerModal: () => void;
 }
 
 export const CartSidebar = ({
   cart, updateQuantity, removeItem, onCheckout, 
-  subtotal, taxTotal, grandTotal, customerName, onOpenCustomerModal
+  subtotal, taxTotal, grandTotal, customer, onOpenCustomerModal
 }: CartSidebarProps) => {
 
   return (
@@ -42,7 +42,12 @@ export const CartSidebar = ({
           </div>
           <div>
             <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Customer</p>
-            <p className="text-sm font-bold text-gray-900">{customerName || 'Walk-in Customer'}</p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-gray-900">{customer?.name || 'Walk-in Customer'}</p>
+              {customer?.tier && <span className="text-[9px] uppercase font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">{customer.tier}</span>}
+            </div>
+            {customer && <p className="text-xs font-bold text-amber-600 mt-0.5">{customer.loyaltyPoints || 0} pts available</p>}
+
           </div>
         </div>
         <ChevronRight className="w-5 h-5 text-gray-400" />

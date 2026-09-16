@@ -67,9 +67,16 @@ export const CustomerModal = ({ isOpen, onClose, onSelectCustomer }: CustomerMod
                 {results.map(r => (
                   <button key={r._id} onClick={() => { onSelectCustomer(r); onClose(); }} className="w-full text-left p-3 border border-gray-100 hover:border-amber-300 rounded-xl hover:bg-amber-50 transition-colors flex items-center gap-3">
                     <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-full flex items-center justify-center font-bold text-lg">{r.name.charAt(0)}</div>
-                    <div>
-                      <p className="font-bold text-gray-900 leading-none">{r.name}</p>
-                      <p className="text-sm font-medium text-gray-500 mt-1 flex items-center gap-1"><Phone className="w-3 h-3" />{r.phone}</p>
+                    
+                    <div className="flex-1">
+                      <div className="flex justify-between items-center w-full">
+                        <p className="font-bold text-gray-900 leading-none">{r.name}</p>
+                        <span className="text-[10px] uppercase font-black bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded">{r.tier || 'BRONZE'}</span>
+                      </div>
+                      <div className="flex justify-between items-center mt-1">
+                        <p className="text-sm font-medium text-gray-500 flex items-center gap-1"><Phone className="w-3 h-3" />{r.phone}</p>
+                        <p className="text-xs font-bold text-amber-600">{r.loyaltyPoints || 0} pts</p>
+                      </div>
                     </div>
                   </button>
                 ))}
