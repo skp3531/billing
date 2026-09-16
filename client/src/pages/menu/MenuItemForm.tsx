@@ -1,311 +1,471 @@
 import React, { useState, useEffect } from 'react';
-import { MenuItem, Category, MenuVariant, ModifierGroup, ModifierOption } from '../../types';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
+import { MenuItem, Category } from '../../types';
 import { getRawMaterials } from '../../api/inventory.api';
+import { X, Plus, Trash2, Info, DollarSign, ChefHat, Layers, Settings, Check, HelpCircle } from 'lucide-react';
+import clsx from 'clsx';
 
 interface MenuItemFormProps {
-  item?: MenuItem | null;
+  item?: any | null;
   categories: Category[];
   onSave: (data: Partial<MenuItem>) => Promise<void>;
   onClose: () => void;
-  saving: boolean;
+  saving?: boolean;
 }
 
-const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, onClose, saving }) => {
-  const [activeTab, setActiveTab] = useState<'basic' | 'recipe' | 'variants' | 'modifiers'>('basic');
-  const [recipe, setRecipe] = useState<any[]>(item?.recipe || []);
+const MenuItemForm: React.FC<MenuItemFormProps> = ({ item, categories, onSave, onClose, saving = false }) => {
+  const [activeTab, setActiveTab] = useState<'basic' | 'pricing' | 'recipe' | 'modifiers' | 'settings'>('basic');
   const [rawMaterials, setRawMaterials] = useState<any[]>([]);
 
+  const [formData, setFormData] = useState<any>({
+    name: item?.name || '',
+    shortName: item?.shortName || '',
+    sku: item?.sku || '',
+    description: item?.description || '',
+    categoryId: typeof item?.categoryId === 'object' ? item?.categoryId?._id : (item?.categoryId || categories[0]?._id || ''),
+    basePrice: item?.basePrice || 0,
+    taxRate: item?.taxRate || 5,
+    isVeg: item?.isVeg ?? true,
+    dietaryTags: item?.dietaryTags || [],
+    allergens: item?.allergens || [],
+    kitchenStation: item?.kitchenStation || '',
+    prepTime: item?.prepTime || 5,
+    isBestseller: item?.isBestseller || false,
+    active: item?.active ?? true,
+    recipe: item?.recipe || [],
+    variants: item?.variants || [],
+    modifierGroups: item?.modifierGroups || [],
+    availability: item?.availability || { dineIn: true, takeaway: true, delivery: true, qrMenu: true }
+  });
+
   useEffect(() => {
-    getRawMaterials()
-      .then((res) => setRawMaterials(res.data.data || res.data))
-      .catch((err) => console.error(err));
+    getRawMaterials().then((res) => setRawMaterials(res.data.data || res.data)).catch(console.error);
   }, []);
+
+  const handleChange = (field: string, value: any) => {
+    setFormData((prev: any) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAvailabilityChange = (field: string, value: boolean) => {
+    setFormData((prev: any) => ({ ...prev, availability: { ...prev.availability, [field]: value } }));
+  };
+
+  // Recipe calculation
+  const totalFoodCost = formData.recipe.reduce((sum: number, r: any) => {
+    const rm = rawMaterials.find(m => m._id === (typeof r.rawMaterialId === 'object' ? r.rawMaterialId._id : r.rawMaterialId));
+    if (rm) return sum + (rm.unitCost * r.quantity);
+    return sum;
+  }, 0);
   
-  // Basic info
-  const [name, setName] = useState(item?.name || '');
-  const [shortCode, setShortCode] = useState(item?.shortCode || '');
-  const [description, setDescription] = useState(item?.description || '');
-  const [categoryId, setCategoryId] = useState<string>(
-    item ? (typeof item.categoryId === 'object' ? item.categoryId._id : item.categoryId) : (categories[0]?._id || '')
-  );
-  const [basePrice, setBasePrice] = useState(item?.basePrice || 0);
-  const [isVeg, setIsVegetarian] = useState(item?.isVeg ?? true);
-  const [spicinessLevel, setSpicinessLevel] = useState(item?.spicinessLevel || 0);
-  const [active, setActive] = useState(item?.active ?? true);
-
-  // Variants
-  const [variants, setVariants] = useState<MenuVariant[]>(item?.variants || []);
-
-  // Modifiers
-  const [modifierGroups, setModifierGroups] = useState<ModifierGroup[]>(item?.modifierGroups || []);
+  const profit = formData.basePrice - totalFoodCost;
+  const margin = formData.basePrice > 0 ? (profit / formData.basePrice) * 100 : 0;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({
-      name,
-      shortCode,
-      description,
-      categoryId,
-      basePrice,
-      isVeg,
-      spicinessLevel,
-      active,
-      variants,
-      modifierGroups,
-      recipe: recipe.filter(r => r.rawMaterialId && r.quantity > 0),
-    });
+    onSave(formData);
   };
 
-  const addVariant = () => {
-    setVariants([...variants, { name: '', price: 0 }]);
-  };
-
-  const updateVariant = (index: number, key: keyof MenuVariant, value: any) => {
-    const newVariants = [...variants];
-    newVariants[index] = { ...newVariants[index], [key]: value };
-    setVariants(newVariants);
-  };
-
-  const removeVariant = (index: number) => {
-    setVariants(variants.filter((_, i) => i !== index));
-  };
-
-  const addModifierGroup = () => {
-    setModifierGroups([...modifierGroups, { name: '', required: false, minSelections: 0, maxSelections: 1, options: [] }]);
-  };
-
-  const updateModifierGroup = (index: number, key: keyof ModifierGroup, value: any) => {
-    const newGroups = [...modifierGroups];
-    newGroups[index] = { ...newGroups[index], [key]: value };
-    setModifierGroups(newGroups);
-  };
-
-  const removeModifierGroup = (index: number) => {
-    setModifierGroups(modifierGroups.filter((_, i) => i !== index));
-  };
-
-  const addModifierOption = (groupIndex: number) => {
-    const newGroups = [...modifierGroups];
-    newGroups[groupIndex].options.push({ name: '', price: 0, isVeg: true });
-    setModifierGroups(newGroups);
-  };
-
-  const updateModifierOption = (groupIndex: number, optionIndex: number, key: keyof ModifierOption, value: any) => {
-    const newGroups = [...modifierGroups];
-    newGroups[groupIndex].options[optionIndex] = { ...newGroups[groupIndex].options[optionIndex], [key]: value };
-    setModifierGroups(newGroups);
-  };
-
-  const removeModifierOption = (groupIndex: number, optionIndex: number) => {
-    const newGroups = [...modifierGroups];
-    newGroups[groupIndex].options = newGroups[groupIndex].options.filter((_, i) => i !== optionIndex);
-    setModifierGroups(newGroups);
-  };
+  const tabs = [
+    { id: 'basic', label: 'Basic Info', icon: Info },
+    { id: 'pricing', label: 'Pricing & Variants', icon: DollarSign },
+    { id: 'recipe', label: 'Recipe & Cost', icon: ChefHat },
+    { id: 'modifiers', label: 'Modifiers', icon: Layers },
+    { id: 'settings', label: 'Settings', icon: Settings },
+  ];
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between p-6 border-b shrink-0">
-          <h2 className="text-lg font-semibold text-gray-900">
-            {item ? 'Edit Menu Item' : 'Add Menu Item'}
-          </h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">✕</button>
-        </div>
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-3xl w-full max-w-5xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden">
         
-        <div className="flex border-b px-6 shrink-0">
-          <button 
-            className={`py-3 px-4 border-b-2 font-medium text-sm ${activeTab === 'basic' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('basic')}
-          >
-            Basic Info
-          </button>
-          <button 
-            className={`py-3 px-4 border-b-2 font-medium text-sm ${activeTab === 'recipe' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('recipe')}
-          >
-            Recipe
-          </button>
-          <button 
-            className={`py-3 px-4 border-b-2 font-medium text-sm ${activeTab === 'variants' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('variants')}
-          >
-            Variants
-          </button>
-          <button 
-            className={`py-3 px-4 border-b-2 font-medium text-sm ${activeTab === 'modifiers' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
-            onClick={() => setActiveTab('modifiers')}
-          >
-            Modifiers
-          </button>
+        {/* Header */}
+        <div className="flex justify-between items-center p-6 border-b border-gray-100 bg-gray-50/50">
+          <div>
+            <h2 className="text-2xl font-black text-gray-900">{item ? 'Edit Product' : 'Create New Product'}</h2>
+            <p className="text-gray-500 font-bold text-sm mt-1">Advanced Menu Engineering Builder</p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors"><X className="w-6 h-6 text-gray-500" /></button>
         </div>
 
-
-        <div className="flex-1 overflow-y-auto p-6">
-          {activeTab === 'basic' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
-                  <input required value={name} onChange={e => setName(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Short Code *</label>
-                  <input required value={shortCode} onChange={e => setShortCode(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-                </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
-                <select required value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500">
-                  <option value="">Select a category</option>
-                  {categories.map(c => <option key={c._id} value={c._id}>{c.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Base Price *</label>
-                <input type="number" required value={basePrice} onChange={e => setBasePrice(Number(e.target.value))} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                <textarea value={description} onChange={e => setDescription(e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={isVeg} onChange={e => setIsVegetarian(e.target.checked)} className="rounded border-gray-300 text-green-500 focus:ring-green-500" />
-                  <label className="text-sm font-medium text-gray-700">Vegetarian</label>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input type="checkbox" checked={active} onChange={e => setActive(e.target.checked)} className="rounded border-gray-300 text-amber-500 focus:ring-amber-500" />
-                  <label className="text-sm font-medium text-gray-700">Active</label>
-                </div>
-              </div>
+        {/* Layout */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Sidebar Tabs */}
+          <div className="w-64 bg-gray-50 border-r border-gray-100 p-4 overflow-y-auto hidden md:block">
+            <div className="space-y-2">
+              {tabs.map(tab => {
+                const Icon = tab.icon;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id as any)}
+                    className={clsx(
+                      "w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-sm transition-all text-left",
+                      activeTab === tab.id 
+                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" 
+                        : "text-gray-600 hover:bg-white hover:shadow-sm"
+                    )}
+                  >
+                    <Icon className="w-5 h-5" /> {tab.label}
+                  </button>
+                );
+              })}
             </div>
-          )}
+            
+            {/* Live Costing Preview */}
+            <div className="mt-8 bg-white p-4 rounded-xl shadow-sm border border-gray-100">
+               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-2">Live Profitability</p>
+               <div className="space-y-2">
+                 <div className="flex justify-between text-sm"><span className="text-gray-600">Price</span><span className="font-bold">₹{formData.basePrice}</span></div>
+                 <div className="flex justify-between text-sm"><span className="text-gray-600">Food Cost</span><span className="font-bold text-rose-500">₹{totalFoodCost.toFixed(2)}</span></div>
+                 <div className="border-t border-dashed pt-2 flex justify-between text-sm font-black">
+                   <span>Margin</span>
+                   <span className={clsx(margin > 60 ? 'text-emerald-500' : margin > 30 ? 'text-amber-500' : 'text-rose-500')}>
+                     {margin.toFixed(1)}%
+                   </span>
+                 </div>
+               </div>
+            </div>
+          </div>
 
-          
-          {activeTab === 'recipe' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium text-gray-700">Base Recipe (Deducted on Sale)</h3>
-                <button type="button" onClick={() => setRecipe([...recipe, { rawMaterialId: '', quantity: 1 }])} className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1">
-                  <PlusIcon className="w-4 h-4" /> Add Item
-                </button>
-              </div>
-              {recipe.map((r, i) => (
-                <div key={i} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg border">
-                  <div className="flex-1">
-                    <select value={r.rawMaterialId} onChange={e => { const newR = [...recipe]; newR[i].rawMaterialId = e.target.value; setRecipe(newR); }} className="w-full border rounded px-3 py-1.5 text-sm bg-white">
-                      <option value="">Select Material</option>
-                      {rawMaterials.map(rm => (
-                        <option key={rm._id} value={rm._id}>{rm.name} ({rm.unit})</option>
-                      ))}
+          {/* Form Content */}
+          <div className="flex-1 overflow-y-auto p-6 md:p-8 bg-white">
+            
+            {activeTab === 'basic' && (
+              <div className="space-y-6 max-w-2xl">
+                <div className="grid grid-cols-2 gap-6">
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Product Name <span className="text-rose-500">*</span></label>
+                    <input type="text" required value={formData.name} onChange={(e) => handleChange('name', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none font-bold" placeholder="e.g. KitKat Milkshake" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Short Name (For KOT)</label>
+                    <input type="text" value={formData.shortName} onChange={(e) => handleChange('shortName', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none" placeholder="e.g. KK Shake" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">SKU / Item Code</label>
+                    <input type="text" value={formData.sku} onChange={(e) => handleChange('sku', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none" placeholder="e.g. SHK-001" />
+                  </div>
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Category</label>
+                    <select value={formData.categoryId} onChange={(e) => handleChange('categoryId', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none">
+                      {categories.map((c) => <option key={c._id} value={c._id}>{c.name}</option>)}
                     </select>
                   </div>
-                  <div className="w-32">
-                    <input type="number" step="0.01" placeholder="Qty" value={r.quantity} onChange={e => { const newR = [...recipe]; newR[i].quantity = Number(e.target.value); setRecipe(newR); }} className="w-full border rounded px-3 py-1.5 text-sm" />
+                  <div className="col-span-2">
+                    <label className="block text-sm font-bold text-gray-700 mb-2">Description</label>
+                    <textarea value={formData.description} onChange={(e) => handleChange('description', e.target.value)} rows={3} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none" placeholder="Appears on QR Menu..."></textarea>
                   </div>
-                  <button type="button" onClick={() => setRecipe(recipe.filter((_, idx) => idx !== i))} className="p-1 text-red-500 hover:text-red-700">
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
+                  
+                  <div className="col-span-2">
+                     <label className="block text-sm font-bold text-gray-700 mb-3">Dietary Classification</label>
+                     <div className="flex gap-4">
+                       <label className={clsx("flex-1 cursor-pointer p-4 rounded-xl border-2 text-center transition-all font-bold", formData.isVeg ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-100 text-gray-400 hover:bg-gray-50")} onClick={() => handleChange('isVeg', true)}>
+                         <div className="w-4 h-4 border-2 border-emerald-500 flex items-center justify-center mx-auto mb-2"><div className="w-2 h-2 rounded-full bg-emerald-500"></div></div>
+                         Vegetarian
+                       </label>
+                       <label className={clsx("flex-1 cursor-pointer p-4 rounded-xl border-2 text-center transition-all font-bold", !formData.isVeg ? "border-rose-500 bg-rose-50 text-rose-700" : "border-gray-100 text-gray-400 hover:bg-gray-50")} onClick={() => handleChange('isVeg', false)}>
+                         <div className="w-4 h-4 border-2 border-rose-500 flex items-center justify-center mx-auto mb-2"><div className="w-2 h-2 rounded-full bg-rose-500"></div></div>
+                         Non-Vegetarian
+                       </label>
+                     </div>
+                  </div>
                 </div>
-              ))}
-              {recipe.length === 0 && <p className="text-sm text-gray-500 italic">No recipe added. Inventory won't be deducted for this item.</p>}
-            </div>
-          )}
-
-          {activeTab === 'variants' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium text-gray-700">Item Variants (e.g., Size)</h3>
-                <button type="button" onClick={addVariant} className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1">
-                  <PlusIcon className="w-4 h-4" /> Add Variant
-                </button>
               </div>
-              {variants.map((v, i) => (
-                <div key={i} className="flex gap-3 items-center bg-gray-50 p-3 rounded-lg border">
-                  <div className="flex-1">
-                    <input placeholder="Variant name (e.g., Large)" value={v.name} onChange={e => updateVariant(i, 'name', e.target.value)} className="w-full border rounded px-3 py-1.5 text-sm" />
-                  </div>
-                  <div className="flex-1">
-                    <input type="number" placeholder="Price" value={v.price} onChange={e => updateVariant(i, 'price', Number(e.target.value))} className="w-full border rounded px-3 py-1.5 text-sm" />
-                  </div>
-                  <button type="button" onClick={() => removeVariant(i)} className="p-1 text-red-500 hover:text-red-700">
-                    <TrashIcon className="w-5 h-5" />
-                  </button>
-                </div>
-              ))}
-              {variants.length === 0 && <p className="text-sm text-gray-500 italic">No variants added. Base price will be used.</p>}
-            </div>
-          )}
+            )}
 
-          {activeTab === 'modifiers' && (
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <h3 className="text-sm font-medium text-gray-700">Modifier Groups (e.g., Toppings)</h3>
-                <button type="button" onClick={addModifierGroup} className="text-sm text-amber-600 hover:text-amber-700 flex items-center gap-1">
-                  <PlusIcon className="w-4 h-4" /> Add Group
-                </button>
-              </div>
-              {modifierGroups.map((group, gIndex) => (
-                <div key={gIndex} className="bg-gray-50 p-4 rounded-lg border space-y-4">
-                  <div className="flex gap-3 items-start">
-                    <div className="flex-1 space-y-3">
-                      <input placeholder="Group Name (e.g., Extra Toppings)" value={group.name} onChange={e => updateModifierGroup(gIndex, 'name', e.target.value)} className="w-full border rounded px-3 py-1.5 text-sm font-medium" />
-                      <div className="flex items-center gap-4">
-                        <label className="flex items-center gap-1 text-sm">
-                          <input type="checkbox" checked={group.required} onChange={e => updateModifierGroup(gIndex, 'required', e.target.checked)} className="rounded text-amber-500" />
-                          Required
-                        </label>
-                        <label className="flex items-center gap-1 text-sm">
-                          Min: <input type="number" min="0" value={group.minSelections} onChange={e => updateModifierGroup(gIndex, 'minSelections', Number(e.target.value))} className="w-16 border rounded px-2 py-1" />
-                        </label>
-                        <label className="flex items-center gap-1 text-sm">
-                          Max: <input type="number" min="1" value={group.maxSelections} onChange={e => updateModifierGroup(gIndex, 'maxSelections', Number(e.target.value))} className="w-16 border rounded px-2 py-1" />
-                        </label>
-                      </div>
+            {activeTab === 'pricing' && (
+              <div className="space-y-8 max-w-2xl">
+                <div>
+                  <h3 className="text-lg font-black text-gray-900 mb-4">Base Pricing</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Selling Price (₹)</label>
+                      <input type="number" value={formData.basePrice} onChange={(e) => handleChange('basePrice', Number(e.target.value))} className="w-full p-3 bg-white border-2 border-indigo-100 rounded-xl focus:border-indigo-500 outline-none font-black text-xl text-indigo-900" />
                     </div>
-                    <button type="button" onClick={() => removeModifierGroup(gIndex)} className="p-1 text-red-500 hover:text-red-700 mt-1">
-                      <TrashIcon className="w-5 h-5" />
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Tax Rate (%)</label>
+                      <select value={formData.taxRate} onChange={(e) => handleChange('taxRate', Number(e.target.value))} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none">
+                        <option value={0}>0% (Exempt)</option>
+                        <option value={5}>5%</option>
+                        <option value={12}>12%</option>
+                        <option value={18}>18%</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100">
+                  <div className="flex justify-between items-center mb-4">
+                    <div>
+                      <h3 className="text-lg font-black text-gray-900">Variants (Sizes)</h3>
+                      <p className="text-sm text-gray-500">E.g., Small, Regular, Large</p>
+                    </div>
+                    <button onClick={() => handleChange('variants', [...formData.variants, { name: '', price: 0, active: true }])} className="text-indigo-600 bg-indigo-50 px-3 py-2 rounded-lg font-bold text-sm flex items-center gap-1 hover:bg-indigo-100">
+                      <Plus className="w-4 h-4" /> Add Variant
                     </button>
                   </div>
                   
-                  <div className="pl-4 border-l-2 border-gray-200 space-y-2">
-                    <div className="flex justify-between items-center">
-                      <h4 className="text-xs font-medium text-gray-500 uppercase">Options</h4>
-                      <button type="button" onClick={() => addModifierOption(gIndex)} className="text-xs text-amber-600 hover:text-amber-700">
-                        + Add Option
-                      </button>
+                  {formData.variants.length > 0 ? (
+                    <div className="space-y-3">
+                      {formData.variants.map((variant: any, idx: number) => (
+                        <div key={idx} className="flex gap-3 items-start bg-gray-50 p-3 rounded-xl border border-gray-200">
+                          <div className="flex-1">
+                            <input type="text" placeholder="Variant Name (e.g. Large)" value={variant.name} onChange={(e) => {
+                              const newV = [...formData.variants];
+                              newV[idx].name = e.target.value;
+                              handleChange('variants', newV);
+                            }} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none font-bold" />
+                          </div>
+                          <div className="w-32">
+                            <input type="number" placeholder="Price" value={variant.price} onChange={(e) => {
+                              const newV = [...formData.variants];
+                              newV[idx].price = Number(e.target.value);
+                              handleChange('variants', newV);
+                            }} className="w-full p-2.5 bg-white border border-gray-200 rounded-lg outline-none font-bold" />
+                          </div>
+                          <button onClick={() => {
+                            const newV = formData.variants.filter((_:any, i:number) => i !== idx);
+                            handleChange('variants', newV);
+                          }} className="p-2.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      ))}
                     </div>
-                    {group.options.map((opt, oIndex) => (
-                      <div key={oIndex} className="flex gap-2 items-center">
-                        <input placeholder="Option name" value={opt.name} onChange={e => updateModifierOption(gIndex, oIndex, 'name', e.target.value)} className="flex-1 border rounded px-2 py-1 text-sm" />
-                        <input type="number" placeholder="Price" value={opt.price} onChange={e => updateModifierOption(gIndex, oIndex, 'price', Number(e.target.value))} className="w-24 border rounded px-2 py-1 text-sm" />
-                        <label className="flex items-center gap-1 text-xs whitespace-nowrap">
-                          <input type="checkbox" checked={opt.isVeg} onChange={e => updateModifierOption(gIndex, oIndex, 'isVeg', e.target.checked)} className="rounded text-green-500" />
-                          Veg
-                        </label>
-                        <button type="button" onClick={() => removeModifierOption(gIndex, oIndex)} className="p-1 text-red-500 hover:text-red-700">
-                          <TrashIcon className="w-4 h-4" />
-                        </button>
-                      </div>
-                    ))}
-                    {group.options.length === 0 && <p className="text-xs text-gray-400">No options added yet.</p>}
+                  ) : (
+                    <div className="bg-gray-50 border border-dashed border-gray-300 rounded-xl p-8 text-center">
+                      <p className="text-gray-500 font-bold">No variants configured. Product will use Base Price.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'recipe' && (
+              <div className="space-y-6 max-w-3xl">
+                <div className="flex justify-between items-end mb-2">
+                  <div>
+                    <h3 className="text-lg font-black text-gray-900">Standard Recipe & Costing</h3>
+                    <p className="text-sm text-gray-500">Link raw materials to automatically track inventory and calculate theoretical food cost.</p>
+                  </div>
+                  <div className="bg-amber-50 text-amber-700 px-4 py-2 rounded-xl border border-amber-100 font-bold text-sm">
+                    Est. Cost: ₹{totalFoodCost.toFixed(2)}
                   </div>
                 </div>
-              ))}
-              {modifierGroups.length === 0 && <p className="text-sm text-gray-500 italic">No modifier groups added.</p>}
-            </div>
-          )}
+
+                <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
+                  <div className="grid grid-cols-12 bg-gray-50 p-4 border-b border-gray-100 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                    <div className="col-span-5">Raw Material</div>
+                    <div className="col-span-3">Quantity</div>
+                    <div className="col-span-3">Cost</div>
+                    <div className="col-span-1"></div>
+                  </div>
+                  
+                  {formData.recipe.map((r: any, idx: number) => {
+                    const materialId = typeof r.rawMaterialId === 'object' ? r.rawMaterialId._id : r.rawMaterialId;
+                    const rm = rawMaterials.find(m => m._id === materialId);
+                    const cost = rm ? (rm.unitCost * r.quantity).toFixed(2) : '0.00';
+                    
+                    return (
+                      <div key={idx} className="grid grid-cols-12 p-3 items-center border-b border-gray-50 gap-4 hover:bg-gray-50">
+                        <div className="col-span-5">
+                          <select value={materialId} onChange={(e) => {
+                            const newR = [...formData.recipe];
+                            newR[idx].rawMaterialId = e.target.value;
+                            handleChange('recipe', newR);
+                          }} className="w-full p-2 bg-white border border-gray-200 rounded-lg outline-none font-bold">
+                            <option value="">Select Ingredient</option>
+                            {rawMaterials.map(m => <option key={m._id} value={m._id}>{m.name}</option>)}
+                          </select>
+                        </div>
+                        <div className="col-span-3 flex items-center gap-2">
+                          <input type="number" value={r.quantity} onChange={(e) => {
+                            const newR = [...formData.recipe];
+                            newR[idx].quantity = Number(e.target.value);
+                            handleChange('recipe', newR);
+                          }} className="w-20 p-2 bg-white border border-gray-200 rounded-lg outline-none" />
+                          <span className="text-sm font-bold text-gray-500">{rm?.unit || 'unit'}</span>
+                        </div>
+                        <div className="col-span-3 font-bold text-gray-700">₹{cost}</div>
+                        <div className="col-span-1 flex justify-end">
+                          <button onClick={() => {
+                            const newR = formData.recipe.filter((_:any, i:number) => i !== idx);
+                            handleChange('recipe', newR);
+                          }} className="text-gray-400 hover:text-rose-500 p-2"><Trash2 className="w-5 h-5" /></button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                  
+                  <div className="p-4 bg-gray-50/50">
+                    <button onClick={() => handleChange('recipe', [...formData.recipe, { rawMaterialId: '', quantity: 1 }])} className="text-indigo-600 bg-white border border-indigo-200 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-indigo-50 shadow-sm transition-colors">
+                      <Plus className="w-4 h-4" /> Add Ingredient
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'modifiers' && (
+              <div className="space-y-6 max-w-3xl">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <h3 className="text-lg font-black text-gray-900">Modifier Groups</h3>
+                    <p className="text-sm text-gray-500">E.g., Sugar Level, Extra Add-ons</p>
+                  </div>
+                  <button onClick={() => handleChange('modifierGroups', [...formData.modifierGroups, { name: '', isRequired: false, minSelections: 0, maxSelections: 1, active: true, options: [] }])} className="text-indigo-600 bg-indigo-50 px-4 py-2 rounded-xl font-bold text-sm flex items-center gap-2 hover:bg-indigo-100">
+                    <Plus className="w-4 h-4" /> Add Group
+                  </button>
+                </div>
+
+                {formData.modifierGroups.length > 0 ? (
+                  <div className="space-y-6">
+                    {formData.modifierGroups.map((group: any, gIdx: number) => (
+                      <div key={gIdx} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+                        <div className="bg-gray-50 p-4 border-b border-gray-200 flex flex-wrap gap-4 items-center">
+                          <input type="text" placeholder="Group Name (e.g. Add-ons)" value={group.name} onChange={(e) => {
+                            const newG = [...formData.modifierGroups];
+                            newG[gIdx].name = e.target.value;
+                            handleChange('modifierGroups', newG);
+                          }} className="flex-1 min-w-[200px] p-2 bg-white border border-gray-300 rounded-lg outline-none font-bold" />
+                          
+                          <div className="flex items-center gap-4">
+                            <label className="flex items-center gap-2 text-sm font-bold text-gray-700">
+                              <input type="checkbox" checked={group.isRequired} onChange={(e) => {
+                                const newG = [...formData.modifierGroups];
+                                newG[gIdx].isRequired = e.target.checked;
+                                handleChange('modifierGroups', newG);
+                              }} className="w-4 h-4 text-indigo-600 rounded" /> Required
+                            </label>
+                            
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="text-gray-500 font-bold">Max:</span>
+                              <input type="number" value={group.maxSelections} onChange={(e) => {
+                                const newG = [...formData.modifierGroups];
+                                newG[gIdx].maxSelections = Number(e.target.value);
+                                handleChange('modifierGroups', newG);
+                              }} className="w-16 p-1.5 bg-white border border-gray-300 rounded-lg outline-none" />
+                            </div>
+                            
+                            <button onClick={() => {
+                              const newG = formData.modifierGroups.filter((_:any, i:number) => i !== gIdx);
+                              handleChange('modifierGroups', newG);
+                            }} className="p-2 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg"><Trash2 className="w-5 h-5" /></button>
+                          </div>
+                        </div>
+                        
+                        <div className="p-4 space-y-3">
+                          {group.options.map((opt: any, oIdx: number) => (
+                            <div key={oIdx} className="flex gap-3 items-center">
+                              <input type="text" placeholder="Option Name" value={opt.name} onChange={(e) => {
+                                const newG = [...formData.modifierGroups];
+                                newG[gIdx].options[oIdx].name = e.target.value;
+                                handleChange('modifierGroups', newG);
+                              }} className="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none" />
+                              <span className="font-bold text-gray-400">+₹</span>
+                              <input type="number" placeholder="0" value={opt.price} onChange={(e) => {
+                                const newG = [...formData.modifierGroups];
+                                newG[gIdx].options[oIdx].price = Number(e.target.value);
+                                handleChange('modifierGroups', newG);
+                              }} className="w-24 p-2 bg-gray-50 border border-gray-200 rounded-lg outline-none font-bold" />
+                              <button onClick={() => {
+                                const newG = [...formData.modifierGroups];
+                                newG[gIdx].options = newG[gIdx].options.filter((_:any, i:number) => i !== oIdx);
+                                handleChange('modifierGroups', newG);
+                              }} className="p-2 text-gray-400 hover:text-rose-500"><X className="w-4 h-4" /></button>
+                            </div>
+                          ))}
+                          <button onClick={() => {
+                            const newG = [...formData.modifierGroups];
+                            newG[gIdx].options.push({ name: '', price: 0, active: true });
+                            handleChange('modifierGroups', newG);
+                          }} className="text-sm font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1 mt-2">
+                            <Plus className="w-4 h-4" /> Add Option
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="bg-gray-50 border border-dashed border-gray-300 rounded-2xl p-12 text-center">
+                    <Layers className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500 font-bold mb-2">No modifiers configured.</p>
+                    <p className="text-sm text-gray-400">Add groups like "Add-ons" or "Crust Type" to give customers choices.</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'settings' && (
+              <div className="space-y-8 max-w-2xl">
+                <div>
+                  <h3 className="text-lg font-black text-gray-900 mb-4">Operational Settings</h3>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">KDS Routing Station</label>
+                      <select value={formData.kitchenStation} onChange={(e) => handleChange('kitchenStation', e.target.value)} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none">
+                        <option value="">None (Auto-complete)</option>
+                        <option value="KITCHEN">Main Kitchen</option>
+                        <option value="BAR">Bar / Beverages</option>
+                        <option value="DESSERT">Dessert Station</option>
+                        <option value="GRILL">Grill Station</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-bold text-gray-700 mb-2">Prep Time (Minutes)</label>
+                      <input type="number" value={formData.prepTime} onChange={(e) => handleChange('prepTime', Number(e.target.value))} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl outline-none" />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100">
+                  <h3 className="text-lg font-black text-gray-900 mb-4">Multi-Channel Availability</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { id: 'dineIn', label: 'Dine-In POS' },
+                      { id: 'takeaway', label: 'Takeaway POS' },
+                      { id: 'delivery', label: 'Online Delivery' },
+                      { id: 'qrMenu', label: 'Customer QR Menu' }
+                    ].map(channel => (
+                      <label key={channel.id} className={clsx("flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer transition-all", formData.availability[channel.id] ? "border-indigo-500 bg-indigo-50" : "border-gray-100 bg-white opacity-60")}>
+                        <div className={clsx("w-6 h-6 rounded-md flex items-center justify-center transition-colors", formData.availability[channel.id] ? "bg-indigo-500" : "bg-gray-200")}>
+                          {formData.availability[channel.id] && <Check className="w-4 h-4 text-white" />}
+                        </div>
+                        <span className="font-bold text-gray-800">{channel.label}</span>
+                        <input type="checkbox" className="hidden" checked={formData.availability[channel.id]} onChange={(e) => handleAvailabilityChange(channel.id, e.target.checked)} />
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="pt-6 border-t border-gray-100">
+                  <h3 className="text-lg font-black text-gray-900 mb-4">Marketing Badges</h3>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={formData.isBestseller} onChange={(e) => handleChange('isBestseller', e.target.checked)} className="w-5 h-5 text-amber-500 rounded border-gray-300" />
+                      <span className="font-bold text-gray-700">⭐ Bestseller</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" checked={formData.active} onChange={(e) => handleChange('active', e.target.checked)} className="w-5 h-5 text-emerald-500 rounded border-gray-300" />
+                      <span className="font-bold text-gray-700">🟢 Active in Catalog</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+          </div>
         </div>
 
-        <div className="p-6 border-t shrink-0 flex gap-3">
-          <button type="button" onClick={onClose} className="flex-1 border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-            Cancel
-          </button>
-          <button onClick={handleSubmit} disabled={saving} className="flex-1 bg-amber-500 hover:bg-amber-600 text-white py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50">
-            {saving ? 'Saving...' : item ? 'Update Item' : 'Create Item'}
-          </button>
+        {/* Footer Actions */}
+        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-between items-center">
+          <p className="text-sm text-gray-500 font-bold flex items-center gap-1"><HelpCircle className="w-4 h-4" /> Changes autosave to draft</p>
+          <div className="flex gap-3">
+            <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-200 transition-colors">Cancel</button>
+            <button onClick={handleSubmit} disabled={saving} className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-black shadow-lg shadow-indigo-200 hover:bg-indigo-700 transition-colors disabled:opacity-50">
+              {saving ? 'Saving Product...' : 'Save Product'}
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
   );
