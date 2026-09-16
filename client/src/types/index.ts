@@ -13,6 +13,8 @@ export interface Organization {
 }
 
 export interface Outlet {
+  taxRate?: number;
+  printerSize?: '58mm' | '80mm';
   _id: string;
   organizationId: string;
   name: string;

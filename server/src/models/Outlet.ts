@@ -16,6 +16,8 @@ export interface IOutlet extends Document {
   active: boolean;
   isKitchenKotActive: boolean;
   isTableManagementActive: boolean;
+  printerSize?: '58mm' | '80mm';
+  taxRate?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -37,6 +39,8 @@ const OutletSchema = new Schema(
     active: { type: Boolean, default: true },
     isKitchenKotActive: { type: Boolean, default: true },
     isTableManagementActive: { type: Boolean, default: true },
+    printerSize: { type: String, enum: ['58mm', '80mm'], default: '80mm' },
+    taxRate: { type: Number, default: 5 },
   },
   { timestamps: true }
 );

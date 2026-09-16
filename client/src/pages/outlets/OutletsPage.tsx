@@ -10,11 +10,12 @@ interface OutletFormData {
   invoicePrefix: string;
   phone: string;
   gstin: string;
+  taxRate: number;
   address: { street: string; city: string; state: string; pincode: string };
 }
 
 const defaultForm: OutletFormData = {
-  name: '', code: '', invoicePrefix: '', phone: '', gstin: '',
+  name: '', code: '', invoicePrefix: '', phone: '', gstin: '', taxRate: 5,
   address: { street: '', city: '', state: '', pincode: '' },
 };
 
@@ -49,7 +50,7 @@ const OutletsPage = () => {
   const openEdit = (o: Outlet) => {
     setForm({
       name: o.name, code: o.code, invoicePrefix: o.invoicePrefix,
-      phone: o.phone || '', gstin: o.gstin || '',
+      phone: o.phone || '', gstin: o.gstin || '', taxRate: o.taxRate || 5,
       address: o.address || defaultForm.address,
     });
     setEditingId(o._id);
