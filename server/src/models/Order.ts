@@ -48,6 +48,7 @@ export interface IOrder extends Document {
   subtotal: number;
   taxTotal: number;
   discountTotal: number;
+  loyaltyPointsUsed?: number;
   grandTotal: number;
   notes?: string;
   createdAt: Date;
@@ -128,6 +129,7 @@ const orderSchema = new Schema<IOrder>(
     subtotal: { type: Number, required: true },
     taxTotal: { type: Number, default: 0 },
     discountTotal: { type: Number, default: 0 },
+    loyaltyPointsUsed: { type: Number, default: 0 },
     grandTotal: { type: Number, required: true },
     notes: { type: String },
     priority: { type: String, enum: ['NORMAL', 'HIGH', 'VIP'], default: 'NORMAL' },

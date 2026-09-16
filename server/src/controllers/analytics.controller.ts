@@ -248,6 +248,36 @@ export const getProfitAndLoss = asyncHandler(async (req: Request, res: Response)
     { $match: { ...getBaseMatch(req), ...purchaseDateFilter, status: { $ne: 'CANCELLED' } } },
     { $group: { _id: null, amount: { $sum: '$totalAmount' } } }
   ]);
+
+  // Dynamic COGS Calculation based on recipes
+  const ordersForCogs = await Order.find({ ...match, status: 'COMPLETED' }).lean();
+  const allItems = await MenuItem.find({ organizationId: req.user!.organizationId }).lean();
+  const allMaterials = await RawMaterial.find({ organizationId: req.user!.organizationId }).lean();
+  
+  const materialMap = new Map();
+  allMaterials.forEach(m => materialMap.set(m._id.toString(), m.unitCost || 0));
+  
+  const itemCogsMap = new Map();
+  allItems.forEach(item => {
+    let cost = 0;
+    if (item.recipe && Array.isArray(item.recipe)) {
+      item.recipe.forEach(r => {
+        const unitCost = materialMap.get(r.rawMaterialId?.toString()) || 0;
+        cost += unitCost * (r.quantity || 0);
+      });
+    }
+    itemCogsMap.set(item._id.toString(), cost);
+  });
+  
+  let computedCogs = 0;
+  ordersForCogs.forEach(order => {
+    if (order.items && Array.isArray(order.items)) {
+      order.items.forEach(item => {
+        const itemCost = itemCogsMap.get(item.menuItemId?.toString()) || 0;
+        computedCogs += itemCost * (item.quantity || 1);
+      });
+    }
+  });
   
   const grossSales = revenueResult[0]?.grossSales || 0;
   const revenue = revenueResult[0]?.revenue || 0;
@@ -255,7 +285,7 @@ export const getProfitAndLoss = asyncHandler(async (req: Request, res: Response)
   const expenses = expensesResult[0]?.amount || 0;
   const purchases = purchasesResult[0]?.amount || 0;
   
-  const cogs = purchases; // Approximation for restaurant until full recipe deduction is live
+  const cogs = computedCogs; // Approximation for restaurant until full recipe deduction is live
   const grossProfit = revenue - cogs;
   const netProfit = grossProfit - expenses;
   

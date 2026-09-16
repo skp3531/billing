@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import Reservation from '../models/Reservation';
 import Waitlist from '../models/Waitlist';
+import { Table } from '../models/Table';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 
 // --- RESERVATIONS ---
@@ -41,6 +42,25 @@ export const updateReservationStatus = async (req: Request, res: Response) => {
     { new: true }
   ).populate('tableId');
   
+  if (status === 'SEATED' && (tableId || reservation?.tableId)) {
+    const tid = tableId || reservation?.tableId;
+    await Table.findOneAndUpdate(
+      { _id: tid, organizationId: req.user!.organizationId },
+      { $set: { status: 'OCCUPIED' } }
+    );
+  }
+  
+  if (!reservation) return errorResponse(res, 'Reservation not found', 404);
+  return successResponse(res, reservation, 'Reservation updated');
+};
+  if (tableId) updateData.tableId = tableId;
+
+  const reservation = await Reservation.findOneAndUpdate(
+    { _id: req.params.id, organizationId: req.user!.organizationId },
+    { $set: updateData },
+    { new: true }
+  ).populate('tableId');
+  
   if (!reservation) return errorResponse(res, 'Reservation not found', 404);
   return successResponse(res, reservation, 'Reservation updated');
 };
@@ -71,12 +91,20 @@ export const addToWaitlist = async (req: Request, res: Response) => {
 };
 
 export const updateWaitlistStatus = async (req: Request, res: Response) => {
-  const { status } = req.body;
+  const { status, tableId } = req.body;
   const waitlist = await Waitlist.findOneAndUpdate(
     { _id: req.params.id, organizationId: req.user!.organizationId },
     { $set: { status } },
     { new: true }
   );
+  
+  if (status === 'SEATED' && tableId) {
+    await Table.findOneAndUpdate(
+      { _id: tableId, organizationId: req.user!.organizationId },
+      { $set: { status: 'OCCUPIED' } }
+    );
+  }
+  
   if (!waitlist) return errorResponse(res, 'Waitlist entry not found', 404);
   return successResponse(res, waitlist, 'Waitlist updated');
 };

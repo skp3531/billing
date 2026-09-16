@@ -22,13 +22,15 @@ interface CartSidebarProps {
   subtotal: number;
   taxTotal: number;
   grandTotal: number;
+  loyaltyPointsUsed?: number;
+  setLoyaltyPointsUsed?: (pts: number) => void;
   customer: any;
   onOpenCustomerModal: () => void;
 }
 
 export const CartSidebar = ({
   cart, updateQuantity, removeItem, onCheckout, 
-  subtotal, taxTotal, grandTotal, customer, onOpenCustomerModal
+  subtotal, taxTotal, grandTotal, customer, loyaltyPointsUsed = 0, setLoyaltyPointsUsed, onOpenCustomerModal
 }: CartSidebarProps) => {
 
   return (
@@ -46,7 +48,25 @@ export const CartSidebar = ({
               <p className="text-sm font-bold text-gray-900">{customer?.name || 'Walk-in Customer'}</p>
               {customer?.tier && <span className="text-[9px] uppercase font-black bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded">{customer.tier}</span>}
             </div>
-            {customer && <p className="text-xs font-bold text-amber-600 mt-0.5">{customer.loyaltyPoints || 0} pts available</p>}
+            {customer && (
+              <div className="mt-1">
+                <p className="text-xs font-bold text-amber-600">{customer.loyaltyPoints || 0} pts available</p>
+                {setLoyaltyPointsUsed && customer.loyaltyPoints > 0 && (
+                  <div className="flex items-center gap-2 mt-1">
+                    <input 
+                      type="number" 
+                      max={customer.loyaltyPoints} 
+                      min="0"
+                      value={loyaltyPointsUsed || ''} 
+                      onChange={e => setLoyaltyPointsUsed(Math.min(customer.loyaltyPoints, Number(e.target.value)))}
+                      className="w-16 px-2 py-1 text-xs border rounded outline-none"
+                      placeholder="Use pts"
+                    />
+                    <span className="text-[10px] text-gray-400">Redeem</span>
+                  </div>
+                )}
+              </div>
+            )}
 
           </div>
         </div>
@@ -106,6 +126,10 @@ export const CartSidebar = ({
           <div className="flex justify-between text-sm font-medium text-gray-500">
             <span>Taxes</span>
             <span>₹{taxTotal.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-medium text-gray-500">
+            <span>Points Discount</span>
+            <span className="text-emerald-600">-₹{loyaltyPointsUsed.toFixed(2)}</span>
           </div>
           <div className="flex justify-between text-xl font-black text-gray-900 pt-2 border-t border-gray-200">
             <span>Total</span>

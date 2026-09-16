@@ -41,6 +41,7 @@ const POSPage = () => {
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCustomer, setShowCustomer] = useState(false);
   const [customer, setCustomer] = useState<any>(null);
+  const [loyaltyPointsUsed, setLoyaltyPointsUsed] = useState(0);
   
   useEffect(() => {
     fetchData();
@@ -82,6 +83,7 @@ const POSPage = () => {
     toast.success('Bill placed on hold!');
     setCart([]);
     setCustomer(null);
+    setLoyaltyPointsUsed(0);
   };
   
   const handleRecallBill = async () => {
@@ -158,6 +160,7 @@ const POSPage = () => {
         paymentStatus: (method === 'PENDING' ? 'UNPAID' : 'PAID') as any,
         customerId: customer?._id,
         customer: customer ? { name: customer.name, phone: customer.phone } : undefined,
+        loyaltyPointsUsed,
         items: cart.map(c => ({
           menuItemId: c.menuItem._id,
           name: c.menuItem.name,
@@ -214,6 +217,8 @@ const POSPage = () => {
           taxTotal={taxTotal}
           grandTotal={grandTotal}
           customer={customer}
+          loyaltyPointsUsed={loyaltyPointsUsed}
+          setLoyaltyPointsUsed={setLoyaltyPointsUsed}
           onOpenCustomerModal={() => setShowCustomer(true)}
         />
       </div>
