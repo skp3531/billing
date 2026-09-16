@@ -3,6 +3,8 @@ import { Settings, Building2, MapPin, Store, Clock, Users, ShieldAlert, BadgeInd
 import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
 import clsx from 'clsx';
+import BillingTab from './BillingTab';
+import OperationsTab from './OperationsTab';
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -171,7 +173,10 @@ export default function SettingsPage() {
               </>
             )}
 
-            {activeTab !== 'dashboard' && (
+            {activeTab === 'billing' && <BillingTab org={data.org} onUpdate={fetchData} />}
+            {activeTab === 'modules' && <OperationsTab org={data.org} onUpdate={fetchData} />}
+
+            {activeTab !== 'dashboard' && activeTab !== 'billing' && activeTab !== 'modules' && (
               <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
                 <Settings className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h2 className="text-xl font-black text-gray-900">Module Configuration</h2>
