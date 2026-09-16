@@ -22,6 +22,41 @@ export interface IUser extends Document {
     relation: string;
   };
   
+  
+  // Personal Details
+  photoUrl?: string;
+  dateOfBirth?: Date;
+  gender?: 'MALE' | 'FEMALE' | 'OTHER';
+  bloodGroup?: string;
+  
+  // Advanced HR
+  reportingManagerId?: mongoose.Types.ObjectId;
+  
+  // Banking & Compliance
+  bankDetails?: {
+    bankName: string;
+    accountName: string;
+    accountNumber: string;
+    ifscCode: string;
+    panNumber: string;
+    aadhaarNumber: string;
+  };
+  
+  documents?: {
+    docType: string;
+    url: string;
+    verified: boolean;
+  }[];
+  
+  // Advanced Payroll
+  salaryStructure?: {
+    basic: number;
+    hra: number;
+    allowances: number;
+    pfDeduction: number;
+    esiDeduction: number;
+  };
+
   // Payroll
   payrollType?: 'SALARY' | 'HOURLY';
   baseSalary?: number;
@@ -52,6 +87,37 @@ const UserSchema = new Schema(
       relation: String
     },
     
+    
+    photoUrl: String,
+    dateOfBirth: Date,
+    gender: { type: String, enum: ['MALE', 'FEMALE', 'OTHER'] },
+    bloodGroup: String,
+    
+    reportingManagerId: { type: Schema.Types.ObjectId, ref: 'User' },
+    
+    bankDetails: {
+      bankName: String,
+      accountName: String,
+      accountNumber: String,
+      ifscCode: String,
+      panNumber: String,
+      aadhaarNumber: String
+    },
+    
+    documents: [{
+      docType: String,
+      url: String,
+      verified: { type: Boolean, default: false }
+    }],
+    
+    salaryStructure: {
+      basic: { type: Number, default: 0 },
+      hra: { type: Number, default: 0 },
+      allowances: { type: Number, default: 0 },
+      pfDeduction: { type: Number, default: 0 },
+      esiDeduction: { type: Number, default: 0 }
+    },
+
     payrollType: { type: String, enum: ['SALARY', 'HOURLY'], default: 'SALARY' },
     baseSalary: { type: Number, default: 0 },
     hourlyRate: { type: Number, default: 0 },

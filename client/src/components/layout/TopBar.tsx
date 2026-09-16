@@ -1,6 +1,8 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../store/authStore';
+import api from '../../api/axios';
+import { toast } from 'react-hot-toast';
 import { useAppStore } from '../../store/appStore';
 import OutletSelector from './OutletSelector';
 import { Bars3Icon, BellIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';

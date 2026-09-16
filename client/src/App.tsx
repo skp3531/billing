@@ -4,6 +4,7 @@ import SetupWizard from './pages/setup/SetupWizard';
 import DashboardPage from './pages/dashboard/DashboardPage';
 import ComingSoonPage from './pages/ComingSoonPage';
 import UsersPage from './pages/users/UsersPage';
+import HRDashboard from './pages/hr/HRDashboard';
 import OutletsPage from './pages/outlets/OutletsPage';
 import RolesPage from './pages/roles/RolesPage';
 import SettingsPage from './pages/settings/SettingsPage';
