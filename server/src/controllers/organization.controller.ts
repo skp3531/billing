@@ -51,3 +51,31 @@ export const setupOrganization = async (req: Request, res: Response) => {
   return successResponse(res, { organization: org, outlet }, 'Setup complete', 200);
 };
 
+
+export const getCommandCenter = async (req: Request, res: Response) => {
+  const orgId = req.user!.organizationId;
+  const [org, totalOutlets, activeUsers] = await Promise.all([
+    Organization.findById(orgId).lean(),
+    Outlet.countDocuments({ organizationId: orgId, active: true }),
+    User.countDocuments({ organizationId: orgId, active: true })
+  ]);
+  
+  if (!org) return errorResponse(res, 'Organization not found', 404);
+
+  let activeIntegrations = 0;
+  if (org.integrations?.razorpayKey) activeIntegrations++;
+  if (org.integrations?.zomatoId) activeIntegrations++;
+  if (org.integrations?.swiggyId) activeIntegrations++;
+
+  return successResponse(res, {
+    org,
+    kpis: {
+      totalOutlets,
+      activeUsers,
+      activeIntegrations,
+      activePrinters: 2, // Dummy for now
+      activePaymentMethods: 5,
+      activeTaxProfiles: 3
+    }
+  });
+};

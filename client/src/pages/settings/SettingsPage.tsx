@@ -1,365 +1,193 @@
-import { useState, useEffect } from 'react';
-import { toast } from 'react-hot-toast';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Settings, Building2, MapPin, Store, Clock, Users, ShieldAlert, BadgeIndianRupee, ReceiptText, Printer, TabletSmartphone, Server, Bell, Key, Zap, CheckCircle, Database } from 'lucide-react';
 import api from '../../api/axios';
-import { useAuthStore } from '../../store/authStore';
-import { Organization } from '../../types';
-import { BuildingOffice2Icon, MapPinIcon, PhoneIcon, EnvelopeIcon } from '@heroicons/react/24/outline';
-import PrinterSettingsTab from './PrinterSettingsTab';
-import { navItems } from '../../components/layout/Sidebar';
+import { toast } from 'react-hot-toast';
+import clsx from 'clsx';
 
-type Tab = 'organization' | 'outlets' | 'roles' | 'printers' | 'modules' | 'apps';
-
-const SettingsPage = () => {
-  const { organization: currentOrg, setAuth } = useAuthStore();
-  const [activeTab, setActiveTab] = useState<Tab>('organization');
-  const [org, setOrg] = useState<Organization | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({
-    name: '', phone: '', email: '', gstin: '',
-    address: { street: '', city: '', state: '', pincode: '' },
-  });
-  const [modulesEnabled, setModulesEnabled] = useState({ tables: true, kitchen: true });
-  const [printSize, setPrintSize] = useState<'58mm' | '80mm' | 'A4'>('80mm');
-  const [savingModules, setSavingModules] = useState(false);
+export default function SettingsPage() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [data, setData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchOrg = async () => {
-      setLoading(true);
-      try {
-        const res = await api.get('/organizations/me');
-        const data = res.data.data as Organization;
-        setOrg(data);
-        setForm({
-          name: data.name || '',
-          phone: data.phone || '',
-          email: data.email || '',
-          gstin: data.gstin || '',
-          address: data.address || { street: '', city: '', state: '', pincode: '' },
-        });
-        // Initialize modules from org settings if present
-        const anyData = data as any;
-        if (anyData.modulesEnabled) {
-          setModulesEnabled({
-            tables: anyData.modulesEnabled.tables ?? true,
-            kitchen: anyData.modulesEnabled.kitchen ?? true,
-          });
-        }
-        if (anyData.printSize) {
-          setPrintSize(anyData.printSize);
-        }
-      } catch {
-        toast.error('Failed to load organization');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchOrg();
+    fetchData();
   }, []);
 
-  const handleSave = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setSaving(true);
+  const fetchData = async () => {
     try {
-      const res = await api.put('/organizations/me', form);
-      const updated = res.data.data as Organization;
-      setOrg(updated);
-      // Update the auth store with new org info
-      if (currentOrg) {
-        const authStore = useAuthStore.getState();
-        authStore.setAuth({
-          accessToken: authStore.accessToken || '',
-          user: authStore.user!,
-          organization: updated,
-          outlets: authStore.outlets,
-          currentOutlet: authStore.currentOutlet!,
-        });
-      }
-      toast.success('Organization updated successfully');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to update organization');
+      const res = await api.get('/organization/command-center');
+      setData(res.data.data);
+    } catch {
+      toast.error('Failed to fetch settings');
     } finally {
-      setSaving(false);
+      setLoading(false);
     }
   };
 
-  const handleSaveModules = async () => {
-    setSavingModules(true);
-    try {
-      const res = await api.put('/organizations/me', { modulesEnabled, printSize } as any);
-      const updated = res.data.data;
-      
-      const authStore = useAuthStore.getState();
-      authStore.setAuth({
-        accessToken: authStore.accessToken || '',
-        user: authStore.user!,
-        organization: updated,
-        outlets: authStore.outlets,
-        currentOutlet: authStore.currentOutlet!,
-      });
-      
-      toast.success('Module settings saved');
-    } catch (err: unknown) {
-      const error = err as { response?: { data?: { message?: string } } };
-      toast.error(error.response?.data?.message || 'Failed to save module settings');
-    } finally {
-      setSavingModules(false);
+  const menuGroups = [
+    {
+      title: 'General',
+      items: [
+        { id: 'dashboard', label: 'Dashboard', icon: Zap },
+        { id: 'organization', label: 'Organization Profile', icon: Building2 },
+        { id: 'outlets', label: 'Outlet Management', icon: Store },
+        { id: 'legal', label: 'Legal & Compliance', icon: ShieldAlert },
+      ]
+    },
+    {
+      title: 'Operations & Billing',
+      items: [
+        { id: 'billing', label: 'Billing & Invoicing', icon: ReceiptText },
+        { id: 'taxes', label: 'Tax Configuration', icon: BadgeIndianRupee },
+        { id: 'printing', label: 'Print Settings', icon: Printer },
+        { id: 'modules', label: 'Module Rules (KOT, QR)', icon: TabletSmartphone },
+      ]
+    },
+    {
+      title: 'Access & Security',
+      items: [
+        { id: 'users', label: 'Users & Roles (RBAC)', icon: Users },
+        { id: 'shifts', label: 'Shift Management', icon: Clock },
+        { id: 'integrations', label: 'API Integrations', icon: Key },
+        { id: 'notifications', label: 'Notifications', icon: Bell },
+        { id: 'system', label: 'System & Backups', icon: Database },
+      ]
     }
-  };
-
-  const setAddress = (field: string, value: string) =>
-    setForm(f => ({ ...f, address: { ...f.address, [field]: value } }));
-
-  const tabs: { id: Tab; label: string }[] = [
-    { id: 'apps', label: 'All Apps' },
-    { id: 'organization', label: 'Organization' },
-    { id: 'outlets', label: 'Outlets' },
-    { id: 'roles', label: 'Roles & Permissions' },
-    { id: 'printers', label: 'Printers & Hardware' },
-    { id: 'modules', label: 'Modules & Print' },
   ];
 
-  const { hasPermission } = useAuthStore();
-  const visibleApps = navItems.filter(item => {
-    if (item.name === 'Settings') return false;
-    if (item.name === 'Tables' && !modulesEnabled.tables) return false;
-    if (item.name === 'Kitchen' && !modulesEnabled.kitchen) return false;
-    if (item.permission && !hasPermission(item.permission)) return false;
-    return true;
-  });
+  const KPICard = ({ title, value, subtitle, icon: Icon, colorClass }: any) => (
+    <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-start gap-4">
+      <div className={clsx("p-3 rounded-xl shrink-0", colorClass)}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+        <p className="text-2xl font-black text-gray-900 mt-1">{value}</p>
+        <p className="text-xs font-bold text-gray-400 mt-1">{subtitle}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Settings & Apps</h1>
-        <p className="text-gray-500 text-sm mt-1">Configure your restaurant or access all modules</p>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex border-b border-gray-200 mb-6 overflow-x-auto hide-scrollbar">
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            className={`px-4 sm:px-6 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
-              activeTab === tab.id
-                ? 'border-amber-500 text-amber-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {activeTab === 'apps' && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-          {visibleApps.map(app => (
-            <Link key={app.name} to={app.path || '/'} className="flex flex-col items-center justify-center p-6 bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md hover:border-amber-500 transition-all group">
-              <div className="w-12 h-12 rounded-full bg-amber-50 flex items-center justify-center text-amber-600 mb-3 group-hover:bg-amber-100 transition-colors">
-                <app.icon className="w-6 h-6" />
-              </div>
-              <span className="font-semibold text-gray-800">{app.name}</span>
-            </Link>
-          ))}
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
+      
+      {/* Settings Sidebar */}
+      <div className="w-72 bg-white border-r border-gray-200 overflow-y-auto">
+        <div className="p-6 pb-2">
+          <h2 className="text-xl font-black text-gray-900 flex items-center gap-2"><Settings className="w-6 h-6 text-indigo-600" /> Control Center</h2>
+          <p className="text-xs font-bold text-gray-500 mt-1">Manage all restaurant systems</p>
         </div>
-      )}
 
-      {activeTab === 'organization' && (
-        <div className="max-w-2xl">
-          {loading ? (
-            <div className="flex items-center justify-center h-48">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" />
-            </div>
-          ) : (
-            <form onSubmit={handleSave} className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <BuildingOffice2Icon className="w-5 h-5 text-amber-500" />
-                  Restaurant Information
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">Basic information about your restaurant</p>
-              </div>
-              
-              <div className="grid grid-cols-1 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Restaurant Name *</label>
-                  <input
-                    required
-                    value={form.name}
-                    onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    placeholder="Shake Sphere"
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <PhoneIcon className="w-4 h-4 inline mr-1" />Phone
-                    </label>
-                    <input
-                      value={form.phone}
-                      onChange={e => setForm(f => ({ ...f, phone: e.target.value }))}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="+91 9876543210"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      <EnvelopeIcon className="w-4 h-4 inline mr-1" />Email
-                    </label>
-                    <input
-                      type="email"
-                      value={form.email}
-                      onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                      className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                      placeholder="contact@restaurant.com"
-                    />
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
-                  <input
-                    value={form.gstin}
-                    onChange={e => setForm(f => ({ ...f, gstin: e.target.value.toUpperCase() }))}
-                    className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 font-mono"
-                    placeholder="22AAAAA0000A1Z5"
-                    maxLength={15}
-                  />
-                </div>
-              </div>
-
-              <div className="border rounded-lg p-4 space-y-3">
-                <p className="text-sm font-medium text-gray-700 flex items-center gap-1">
-                  <MapPinIcon className="w-4 h-4" /> Address
-                </p>
-                <input value={form.address.street} onChange={e => setAddress('street', e.target.value)} className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Street address" />
-                <div className="grid grid-cols-3 gap-3">
-                  <input value={form.address.city} onChange={e => setAddress('city', e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="City" />
-                  <input value={form.address.state} onChange={e => setAddress('state', e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="State" />
-                  <input value={form.address.pincode} onChange={e => setAddress('pincode', e.target.value)} className="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500" placeholder="Pincode" maxLength={6} />
-                </div>
-              </div>
-
-              <div className="flex justify-end">
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-                >
-                  {saving ? 'Saving...' : 'Save Changes'}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-      )}
-
-      {activeTab === 'outlets' && (
-        <div>
-          <p className="text-gray-600 mb-4">Manage your restaurant outlets and locations.</p>
-          <Link
-            to="/settings/outlets"
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            Manage Outlets →
-          </Link>
-        </div>
-      )}
-
-      {activeTab === 'printers' && (
-        <PrinterSettingsTab />
-      )}
-
-      {activeTab === 'roles' && (
-        <div>
-          <p className="text-gray-600 mb-4">View roles and their permissions. Use this to understand what each staff role can access.</p>
-          <Link
-            to="/settings/roles"
-            className="inline-flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            View Roles & Permissions →
-          </Link>
-        </div>
-      )}
-
-      {activeTab === 'modules' && (
-        <div className="max-w-2xl space-y-6">
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">Feature Modules</h2>
-              <p className="text-sm text-gray-500 mt-1">Enable or disable features for your restaurant</p>
-            </div>
-
-            <div className="space-y-4">
-              {/* Tables Module Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Tables Module</p>
-                  <p className="text-sm text-gray-500">Enable table management and dine-in tracking</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setModulesEnabled(m => ({ ...m, tables: !m.tables }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${modulesEnabled.tables ? 'bg-amber-500' : 'bg-gray-200'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${modulesEnabled.tables ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-
-              {/* Kitchen Module Toggle */}
-              <div className="flex items-center justify-between p-4 border rounded-lg">
-                <div>
-                  <p className="font-medium text-gray-900">Kitchen Module</p>
-                  <p className="text-sm text-gray-500">Enable kitchen display system (KDS) for order preparation</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setModulesEnabled(m => ({ ...m, kitchen: !m.kitchen }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 ${modulesEnabled.kitchen ? 'bg-amber-500' : 'bg-gray-200'}`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${modulesEnabled.kitchen ? 'translate-x-6' : 'translate-x-1'}`} />
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Print Size</h3>
-              <div className="grid grid-cols-3 gap-3">
-                {(['58mm', '80mm', 'A4'] as const).map(size => (
+        <div className="p-4 space-y-6">
+          {menuGroups.map((group, idx) => (
+            <div key={idx}>
+              <h3 className="text-xs font-black text-gray-400 uppercase tracking-widest mb-2 px-3">{group.title}</h3>
+              <div className="space-y-1">
+                {group.items.map(item => (
                   <button
-                    key={size}
-                    type="button"
-                    onClick={() => setPrintSize(size)}
-                    className={`p-3 rounded-lg border font-medium text-sm transition-colors ${
-                      printSize === size
-                        ? 'border-amber-500 bg-amber-50 text-amber-700 ring-1 ring-amber-500'
-                        : 'border-gray-300 text-gray-600 hover:bg-gray-50'
-                    }`}
+                    key={item.id}
+                    onClick={() => setActiveTab(item.id)}
+                    className={clsx(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all",
+                      activeTab === item.id 
+                        ? "bg-indigo-50 text-indigo-700 shadow-sm" 
+                        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    )}
                   >
-                    {size}
+                    <item.icon className="w-5 h-5 shrink-0" />
+                    {item.label}
                   </button>
                 ))}
               </div>
             </div>
-
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={handleSaveModules}
-                disabled={savingModules}
-                className="bg-amber-500 hover:bg-amber-600 text-white px-6 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-              >
-                {savingModules ? 'Saving...' : 'Save Module Settings'}
-              </button>
-            </div>
-          </div>
+          ))}
         </div>
-      )}
+      </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-8">
+        {loading ? (
+          <div className="text-center p-12 font-bold text-gray-500">Loading Configuration...</div>
+        ) : (
+          <div className="max-w-5xl space-y-8">
+            
+            {activeTab === 'dashboard' && (
+              <>
+                <div>
+                  <h1 className="text-2xl font-black text-gray-900">System Dashboard</h1>
+                  <p className="text-gray-500 font-bold mt-1">Overview of your enterprise configuration</p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <KPICard title="Total Outlets" value={data.kpis.totalOutlets} subtitle="Active franchised locations" icon={Store} colorClass="bg-blue-50 text-blue-600" />
+                  <KPICard title="Active Users" value={data.kpis.activeUsers} subtitle="Staff across all outlets" icon={Users} colorClass="bg-indigo-50 text-indigo-600" />
+                  <KPICard title="API Integrations" value={data.kpis.activeIntegrations} subtitle="Zomato, Swiggy, Razorpay" icon={Key} colorClass="bg-amber-50 text-amber-600" />
+                  <KPICard title="Tax Profiles" value={data.kpis.activeTaxProfiles} subtitle="Active GST Brackets mapped" icon={BadgeIndianRupee} colorClass="bg-rose-50 text-rose-600" />
+                  <KPICard title="Subscription" value={data.org.subscriptionPlan.replace('_', ' ')} subtitle={data.org.subscriptionExpiry ? `Expires: ${new Date(data.org.subscriptionExpiry).toLocaleDateString()}` : "Active"} icon={CheckCircle} colorClass="bg-emerald-50 text-emerald-600" />
+                  <KPICard title="System Backup" value={data.org.lastBackupDate ? new Date(data.org.lastBackupDate).toLocaleDateString() : 'Never'} subtitle="Last successful sync" icon={Server} colorClass="bg-gray-100 text-gray-700" />
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 className="font-black text-gray-900 mb-4">Quick Actions</h3>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button className="p-4 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-sm text-left transition-colors">Start Day Open</button>
+                      <button className="p-4 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-xl font-bold text-sm text-left transition-colors">Setup New Printer</button>
+                      <button className="p-4 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-bold text-sm text-left transition-colors">Cash Closing Report</button>
+                      <button className="p-4 bg-gray-50 hover:bg-gray-100 text-gray-700 rounded-xl font-bold text-sm text-left transition-colors flex items-center justify-between">Trigger Backup <Database className="w-4 h-4"/></button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gradient-to-br from-indigo-900 to-indigo-800 p-6 rounded-2xl border border-indigo-700 shadow-sm text-white">
+                    <h3 className="font-black flex items-center gap-2 mb-4"><Zap className="w-5 h-5 text-amber-400" /> AI Settings Assistant</h3>
+                    <div className="space-y-3">
+                      {!data.org.integrations?.razorpayKey && (
+                        <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                          <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold">Online payments are disabled.</p>
+                            <p className="text-xs text-indigo-200 mt-0.5">Map your Razorpay keys in API Integrations to accept QR payments.</p>
+                          </div>
+                        </div>
+                      )}
+                      {!data.org.lastBackupDate && (
+                        <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                          <Database className="w-5 h-5 text-rose-400 shrink-0" />
+                          <div>
+                            <p className="text-sm font-bold">System Backup not configured.</p>
+                            <p className="text-xs text-indigo-200 mt-0.5">Go to System & Backups to schedule automatic daily database backups.</p>
+                          </div>
+                        </div>
+                      )}
+                      <div className="bg-white/10 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                        <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+                        <div>
+                          <p className="text-sm font-bold">GST Configuration is fully compliant.</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+
+            {activeTab !== 'dashboard' && (
+              <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
+                <Settings className="w-12 h-12 text-gray-300 mx-auto mb-4" />
+                <h2 className="text-xl font-black text-gray-900">Module Configuration</h2>
+                <p className="text-gray-500 font-bold mt-2">This configuration panel ({activeTab}) will be unlocked in the upcoming implementation phases.</p>
+              </div>
+            )}
+
+          </div>
+        )}
+      </div>
     </div>
   );
-};
+}
 
-export default SettingsPage;
+const AlertTriangle = ({ className }: { className?: string }) => (
+  <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+  </svg>
+);
