@@ -179,9 +179,9 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
       const hourlyData: any = {};
       for(let i=0; i<24; i++) hourlyData[i] = 0;
       currentOrders.forEach(o => {
-        if(o.status === 'PAID' || o.paymentStatus === 'PAID') {
+        if(o.paymentStatus === 'PAID') {
           const hour = new Date(o.createdAt).getHours();
-          hourlyData[hour] += o.grandTotal || o.totalAmount || 0;
+          hourlyData[hour] += o.grandTotal || 0 || 0;
         }
       });
       for(let i=0; i<24; i++) {
@@ -191,9 +191,9 @@ export const getCommandCenterData = async (req: Request, res: Response) => {
       // Daily grouping
       const dailyData: any = {};
       currentOrders.forEach(o => {
-        if(o.status === 'PAID' || o.paymentStatus === 'PAID') {
+        if(o.paymentStatus === 'PAID') {
           const dateStr = new Date(o.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-          dailyData[dateStr] = (dailyData[dateStr] || 0) + (o.grandTotal || o.totalAmount || 0);
+          dailyData[dateStr] = (dailyData[dateStr] || 0) + (o.grandTotal || 0 || 0);
         }
       });
       Object.keys(dailyData).forEach(k => salesTrend.push({ name: k, sales: dailyData[k] }));
