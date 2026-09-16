@@ -100,6 +100,7 @@ export interface ModifierGroup {
 }
 
 export interface MenuItem {
+  kitchenStation?: string;
   _id: string;
   organizationId: string;
   categoryId: string | Category;

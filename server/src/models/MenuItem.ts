@@ -29,6 +29,7 @@ interface IModifierGroup {
 }
 
 export interface IMenuItem extends Document {
+  kitchenStation?: string;
   organizationId: mongoose.Types.ObjectId;
   categoryId: mongoose.Types.ObjectId;
   name: string;
