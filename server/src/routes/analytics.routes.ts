@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { getCommandCenterData } from '../controllers/commandCenter.controller';
 import { 
   getDashboardKPIs, 
   getSalesAnalytics, 
@@ -17,6 +18,7 @@ const router = Router();
 router.use(authenticate);
 
 router.get('/dashboard-kpis', getDashboardKPIs);
+router.get('/command-center', getCommandCenterData);
 router.get('/sales', getSalesAnalytics);
 router.get('/products', getProductAnalytics);
 router.get('/customers', getCustomerAnalytics);
