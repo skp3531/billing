@@ -1,243 +1,339 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { BarChart3, TrendingUp, PieChart, IndianRupee, ShoppingBag, ArrowUpRight, ArrowDownRight, Calendar, Download, RefreshCw, Layers } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, BarChart, Bar, Legend, Cell, PieChart as RechartsPieChart, Pie } from 'recharts';
+import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { getReportData, getInventoryReport, getProfitLossReport, getAdvancedReports } from '../../api/analytics.api';
-import { format, subDays } from 'date-fns';
+import clsx from 'clsx';
 
-const ReportsPage = () => {
-  const [activeTab, setActiveTab] = useState<'sales' | 'inventory' | 'profit-loss' | 'advanced'>('sales');
+export default function ReportsPage() {
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [dateRange, setDateRange] = useState('month'); // today, week, month, year
   
-  const [data, setData] = useState<any[]>([]);
-  const [inventory, setInventory] = useState<any[]>([]);
-  const [profitLoss, setProfitLoss] = useState<any>(null);
-  const [advanced, setAdvanced] = useState<any>(null);
+  const [dashboardData, setDashboardData] = useState<any>(null);
+  const [salesData, setSalesData] = useState<any>(null);
+  const [productData, setProductData] = useState<any>(null);
+  const [plData, setPlData] = useState<any>(null);
+  const [gstData, setGstData] = useState<any>(null);
+  
   const [loading, setLoading] = useState(true);
-  
-  const [startDate, setStartDate] = useState(format(subDays(new Date(), 7), 'yyyy-MM-dd'));
-  const [endDate, setEndDate] = useState(format(new Date(), 'yyyy-MM-dd'));
 
-  const fetchReports = async () => {
+  useEffect(() => {
+    fetchAllData();
+  }, [dateRange]);
+
+  const fetchAllData = async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      if (activeTab === 'sales') {
-        const res = await getReportData({ startDate, endDate });
-        setData(res);
-      } else if (activeTab === 'inventory') {
-        const res = await getInventoryReport();
-        setInventory(res.inventory || []);
+      const params = { range: dateRange };
+      const [dashRes, salesRes, prodRes, plRes, gstRes] = await Promise.all([
+        api.get('/analytics/dashboard-kpis', { params }),
+        api.get('/analytics/sales', { params }),
+        api.get('/analytics/products', { params }),
+        api.get('/analytics/profit-and-loss', { params }),
+        api.get('/analytics/gst-report', { params })
+      ]);
       
-      } else if (activeTab === 'advanced') {
-        const res = await getAdvancedReports({ startDate, endDate });
-        setAdvanced(res);
-} else if (activeTab === 'profit-loss') {
-        const res = await getProfitLossReport({ startDate, endDate });
-        setProfitLoss(res);
-      }
-    } catch (error) {
-      console.error('Failed to fetch reports', error);
-      toast.error('Failed to fetch reports');
+      setDashboardData(dashRes.data);
+      setSalesData(salesRes.data);
+      setProductData(prodRes.data);
+      setPlData(plRes.data);
+      setGstData(gstRes.data);
+    } catch (err) {
+      toast.error('Failed to load reports');
     } finally {
       setLoading(false);
     }
   };
 
-  const exportToCSV = () => {
-    if (activeTab === 'sales' && data.length > 0) {
-      const headers = ['Date', 'Total Orders', 'Total Revenue'];
-      const csvContent = [headers.join(','), ...data.map(row => `${row._id},${row.ordersCount},${row.revenue.toFixed(2)}`)].join('\n');
-      downloadCSV(csvContent, `sales_report_${startDate}_to_${endDate}.csv`);
-    } else if (activeTab === 'inventory' && inventory.length > 0) {
-      const headers = ['Material', 'Current Stock', 'Min Stock', 'Unit Cost'];
-      const csvContent = [headers.join(','), ...inventory.map(row => `${row.name},${row.currentStock} ${row.unit},${row.minStockLevel} ${row.unit},${row.unitCost}`)].join('\n');
-      downloadCSV(csvContent, `inventory_report.csv`);
-    } else {
-      toast.error('No data to export for this report');
-    }
+  const KPICard = ({ title, value, previous, prefix = '', suffix = '' }: any) => {
+    const isPositive = previous === null || value >= previous;
+    const diff = previous ? Math.abs(((value - previous) / previous) * 100).toFixed(1) : '0.0';
+    return (
+      <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+        <p className="text-sm font-bold text-gray-500 uppercase tracking-wider">{title}</p>
+        <div className="mt-2 flex items-end gap-4">
+          <h3 className="text-3xl font-black text-gray-900">{prefix}{typeof value === 'number' ? value.toLocaleString('en-IN') : value}{suffix}</h3>
+          {previous !== null && (
+            <div className={clsx("flex items-center gap-1 text-sm font-bold mb-1", isPositive ? "text-emerald-600" : "text-rose-600")}>
+              {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+              {diff}% vs last
+            </div>
+          )}
+        </div>
+      </div>
+    );
   };
 
-  const downloadCSV = (content: string, filename: string) => {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  useEffect(() => {
-    fetchReports();
-  }, [startDate, endDate, activeTab]);
+  const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div className="p-6">
-      <div className="mb-6 flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Reports</h1>
-          <p className="text-gray-600 mt-1">View your analytics and performance</p>
+    <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
+      
+      {/* Sidebar */}
+      <div className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="p-6 border-b border-gray-100">
+          <h2 className="text-xl font-black text-gray-900 flex items-center gap-2"><BarChart3 className="w-6 h-6 text-indigo-600" /> Analytics</h2>
         </div>
-        <div className="flex gap-4 items-end">
-          {activeTab !== 'inventory' && (
-            <>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">Start Date</label>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm" />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700">End Date</label>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-amber-500 focus:ring-amber-500 sm:text-sm" />
-              </div>
-            </>
-          )}
-          <button onClick={exportToCSV} className="bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg font-medium transition-colors h-[38px]">
-            Export to CSV
-          </button>
+        <div className="p-4 space-y-2 flex-1">
+          <SidebarBtn icon={TrendingUp} label="Business Overview" active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} />
+          <SidebarBtn icon={PieChart} label="Item Profitability" active={activeTab === 'products'} onClick={() => setActiveTab('products')} />
+          <SidebarBtn icon={Layers} label="P&L Statement" active={activeTab === 'pl'} onClick={() => setActiveTab('pl')} />
+          <SidebarBtn icon={IndianRupee} label="Tax & GST Report" active={activeTab === 'gst'} onClick={() => setActiveTab('gst')} />
         </div>
       </div>
 
-      <div className="flex border-b border-gray-200 mb-6">
-        <button onClick={() => setActiveTab('sales')} className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'sales' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-          Sales Report
-        </button>
-        <button onClick={() => setActiveTab('inventory')} className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'inventory' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-          Inventory Report
-        </button>
+      {/* Main Content */}
+      <div className="flex-1 overflow-y-auto">
         
-        <button onClick={() => setActiveTab('advanced')} className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'advanced' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-          Advanced Analytics
-        </button>
-<button onClick={() => setActiveTab('profit-loss')} className={`px-6 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'profit-loss' ? 'border-amber-500 text-amber-600' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`}>
-          Profit & Loss
-        </button>
-      </div>
-
-      {activeTab === 'sales' && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Orders Count</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Revenue</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr><td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Loading...</td></tr>
-              ) : data.length > 0 ? (
-                data.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row._id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{row.ordersCount}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">₹{row.revenue.toFixed(2)}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr><td colSpan={3} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No records found.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'inventory' && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Material</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Current Stock</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Min Level</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unit Cost</th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {loading ? (
-                <tr><td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">Loading...</td></tr>
-              ) : inventory.length > 0 ? (
-                inventory.map((row, idx) => (
-                  <tr key={idx}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-medium">{row.name}</td>
-                    <td className={`px-6 py-4 whitespace-nowrap text-sm ${row.currentStock <= row.minStockLevel ? 'text-red-600 font-semibold' : 'text-gray-900'}`}>{row.currentStock} {row.unit}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{row.minStockLevel} {row.unit}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">₹{row.unitCost}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr><td colSpan={4} className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 text-center">No inventory found.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
-
-      {activeTab === 'profit-loss' && (
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100 p-6 max-w-3xl">
-          {loading ? (
-            <div className="text-center text-sm text-gray-500">Loading...</div>
-          ) : profitLoss ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                <div className="text-gray-600 font-medium">Total Revenue (Sales)</div>
-                <div className="text-right font-semibold text-green-600">₹{profitLoss.totalRevenue.toFixed(2)}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                <div className="text-gray-600 font-medium">Total Purchases</div>
-                <div className="text-right font-semibold text-red-500">- ₹{profitLoss.totalPurchase.toFixed(2)}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 border-b pb-4">
-                <div className="text-gray-600 font-medium">Total Expenses</div>
-                <div className="text-right font-semibold text-red-500">- ₹{profitLoss.totalExpense.toFixed(2)}</div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 pt-2">
-                <div className="text-lg font-bold text-gray-900">Net Profit</div>
-                <div className={`text-right text-xl font-bold ${profitLoss.netProfit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  ₹{profitLoss.netProfit.toFixed(2)}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="text-center text-sm text-gray-500">No data available.</div>
-          )}
-        </div>
-      )}
-    
-      {activeTab === 'advanced' && advanced && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="font-bold text-lg mb-4">Payment Methods</h3>
-            <ul className="space-y-3">
-              {advanced.paymentMethods?.map((pm: any) => (
-                <li key={pm._id || 'unknown'} className="flex justify-between border-b pb-2">
-                  <span className="capitalize">{pm._id || 'Not specified'}</span>
-                  <div className="text-right">
-                    <span className="font-bold text-green-600 mr-3">₹{pm.revenue.toFixed(2)}</span>
-                    <span className="text-gray-500 text-sm">({pm.count} orders)</span>
-                  </div>
-                </li>
-              ))}
-              {(!advanced.paymentMethods || advanced.paymentMethods.length === 0) && <p className="text-gray-500">No data</p>}
-            </ul>
+        {/* Header Bar */}
+        <div className="bg-white border-b border-gray-200 p-6 flex justify-between items-center sticky top-0 z-10">
+          <div>
+            <h1 className="text-2xl font-black text-gray-900">
+              {activeTab === 'dashboard' && 'Business Overview'}
+              {activeTab === 'products' && 'Menu Engineering & Product Mix'}
+              {activeTab === 'pl' && 'Profit & Loss Statement'}
+              {activeTab === 'gst' && 'GST Liability Report'}
+            </h1>
+            <p className="text-gray-500 font-bold mt-1 text-sm">Real-time enterprise intelligence</p>
           </div>
           
-          <div className="bg-white rounded-xl shadow-sm border p-6">
-            <h3 className="font-bold text-lg mb-4">Top Selling Items</h3>
-            <ul className="space-y-3">
-              {advanced.topItems?.map((item: any) => (
-                <li key={item._id} className="flex justify-between border-b pb-2">
-                  <span>{item._id}</span>
-                  <div className="text-right">
-                    <span className="font-bold text-green-600 mr-3">₹{item.revenue.toFixed(2)}</span>
-                    <span className="text-gray-500 text-sm">({item.quantity} sold)</span>
-                  </div>
-                </li>
-              ))}
-              {(!advanced.topItems || advanced.topItems.length === 0) && <p className="text-gray-500">No data</p>}
-            </ul>
+          <div className="flex items-center gap-4">
+            <select value={dateRange} onChange={e => setDateRange(e.target.value)} className="bg-gray-100 border-none font-bold text-gray-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+              <option value="today">Today</option>
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
+            </select>
+            <button onClick={fetchAllData} className="p-2 text-gray-500 hover:text-indigo-600 bg-gray-100 hover:bg-indigo-50 rounded-xl transition-colors"><RefreshCw className={clsx("w-5 h-5", loading && "animate-spin")} /></button>
+            <button className="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl font-bold hover:bg-indigo-700 shadow-md"><Download className="w-4 h-4"/> Export</button>
           </div>
         </div>
-      )}
-</div>
-  );
-};
 
-export default ReportsPage;
+        <div className="p-8">
+          {loading ? (
+            <div className="h-64 flex items-center justify-center font-bold text-gray-400">Loading Intelligence...</div>
+          ) : (
+            <div className="max-w-7xl mx-auto space-y-8">
+              
+              {/* DASHBOARD TAB */}
+              {activeTab === 'dashboard' && dashboardData && salesData && (
+                <>
+                  {/* KPIs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <KPICard title="Net Sales" prefix="₹" value={dashboardData.current?.netSales} previous={dashboardData.previous?.netSales} />
+                    <KPICard title="Total Orders" value={dashboardData.current?.ordersCount} previous={dashboardData.previous?.ordersCount} />
+                    <KPICard title="Average Order Value" prefix="₹" value={Math.round(dashboardData.current?.averageOrderValue)} previous={Math.round(dashboardData.previous?.averageOrderValue || 0)} />
+                    <KPICard title="Guest Count" value={dashboardData.current?.uniqueCustomers} previous={dashboardData.previous?.uniqueCustomers} />
+                  </div>
+
+                  {/* Revenue Chart */}
+                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 className="font-black text-gray-900 mb-6">Revenue Trend</h3>
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <AreaChart data={salesData.dailyTrend}>
+                          <defs>
+                            <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                              <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3}/>
+                              <stop offset="95%" stopColor="#6366f1" stopOpacity={0}/>
+                            </linearGradient>
+                          </defs>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                          <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                          <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} tickFormatter={(value) => `₹${value}`} />
+                          <RechartsTooltip cursor={{stroke: '#cbd5e1'}} contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+                          <Area type="monotone" dataKey="revenue" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorRev)" />
+                        </AreaChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                  
+                  {/* Breakdown */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                      <h3 className="font-black text-gray-900 mb-6">Order Types</h3>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={salesData.orderTypeBreakdown}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                            <RechartsTooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '12px'}} />
+                            <Bar dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} barSize={40} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                    
+                    <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                      <h3 className="font-black text-gray-900 mb-6">Peak Trading Hours</h3>
+                      <div className="h-64">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={salesData.peakHours}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                            <XAxis dataKey="_id" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} tickFormatter={(val) => `${val}:00`} />
+                            <YAxis axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12}} />
+                            <RechartsTooltip cursor={{stroke: '#cbd5e1'}} contentStyle={{borderRadius: '12px'}} labelFormatter={(val) => `${val}:00 Hour`} />
+                            <Area type="monotone" dataKey="orders" stroke="#f59e0b" strokeWidth={3} fillOpacity={0.2} fill="#fcd34d" />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* PRODUCTS TAB */}
+              {activeTab === 'products' && productData && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden lg:col-span-2">
+                    <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                      <h3 className="font-black text-gray-900">Top 10 Selling Items</h3>
+                    </div>
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase">Item Name</th>
+                          <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase">Quantity Sold</th>
+                          <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase">Revenue</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100 bg-white">
+                        {productData.topItems?.map((item: any) => (
+                          <tr key={item._id} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{item.name}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">{item.quantity}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-indigo-600">₹{item.revenue.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
+                    <h3 className="font-black text-gray-900 mb-6">Category Sales Mix</h3>
+                    <div className="h-64 flex justify-center">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <RechartsPieChart>
+                          <Pie data={productData.categoryBreakdown} cx="50%" cy="50%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="revenue" nameKey="name" label>
+                            {productData.categoryBreakdown.map((entry: any, index: number) => (
+                              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                            ))}
+                          </Pie>
+                          <RechartsTooltip />
+                        </RechartsPieChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* P&L TAB */}
+              {activeTab === 'pl' && plData && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 max-w-4xl mx-auto">
+                  <div className="text-center mb-8">
+                    <h2 className="text-2xl font-black text-gray-900">Profit & Loss Statement</h2>
+                    <p className="text-gray-500 font-bold">For selected period</p>
+                  </div>
+
+                  <div className="space-y-4">
+                    {/* Revenue */}
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100">
+                      <span className="font-bold text-gray-700">Gross Sales</span>
+                      <span className="font-black text-gray-900">₹{plData.grossSales?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100 pl-6">
+                      <span className="font-bold text-gray-500">Less: Taxes Collected</span>
+                      <span className="font-bold text-rose-500">- ₹{plData.taxes?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b-2 border-gray-900 bg-gray-50 px-4 rounded-lg">
+                      <span className="font-black text-indigo-900">Net Revenue</span>
+                      <span className="font-black text-indigo-900 text-lg">₹{plData.revenue?.toLocaleString() || 0}</span>
+                    </div>
+
+                    {/* COGS */}
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100 mt-6">
+                      <span className="font-bold text-gray-700">Cost of Goods Sold (Purchases)</span>
+                      <span className="font-bold text-rose-500">- ₹{plData.purchases?.toLocaleString() || 0}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-3 border-b-2 border-gray-200 bg-indigo-50/50 px-4 rounded-lg">
+                      <span className="font-black text-gray-900">Gross Profit</span>
+                      <span className="font-black text-gray-900 text-lg">₹{plData.grossProfit?.toLocaleString() || 0}</span>
+                    </div>
+
+                    {/* OPEX */}
+                    <div className="flex justify-between items-center py-3 border-b border-gray-100 mt-6">
+                      <span className="font-bold text-gray-700">Operating Expenses</span>
+                      <span className="font-bold text-rose-500">- ₹{plData.expenses?.toLocaleString() || 0}</span>
+                    </div>
+
+                    {/* Net Profit */}
+                    <div className="flex justify-between items-center py-6 mt-6 border-t-4 border-emerald-500 bg-emerald-50 px-6 rounded-xl">
+                      <span className="font-black text-emerald-900 text-xl">Net Profit</span>
+                      <span className="font-black text-emerald-700 text-2xl">₹{plData.netProfit?.toLocaleString() || 0}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* GST TAB */}
+              {activeTab === 'gst' && gstData && (
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                  <div className="p-6 border-b border-gray-100 flex justify-between items-center">
+                    <div>
+                      <h3 className="font-black text-gray-900">HSN-wise GST Liability</h3>
+                      <p className="text-sm font-bold text-gray-500 mt-1">Ready for GSTR-1 filing</p>
+                    </div>
+                  </div>
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-4 text-left text-xs font-black text-gray-500 uppercase">HSN Code</th>
+                        <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase">Taxable Value</th>
+                        <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase">CGST</th>
+                        <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase">SGST</th>
+                        <th className="px-6 py-4 text-right text-xs font-black text-gray-500 uppercase">Total Tax</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100 bg-white">
+                      {gstData.map((row: any, idx: number) => (
+                        <tr key={idx} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-gray-900">{row.hsnCode}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">₹{row.revenue.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">₹{row.cgst.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">₹{row.sgst.toLocaleString()}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-gray-900 text-right">₹{row.totalTax.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                      {gstData.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="px-6 py-8 text-center text-gray-500 font-bold">No taxable sales in this period.</td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const SidebarBtn = ({ icon: Icon, label, active, onClick }: any) => (
+  <button
+    onClick={onClick}
+    className={clsx(
+      "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all",
+      active 
+        ? "bg-indigo-50 text-indigo-700 shadow-sm" 
+        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+    )}
+  >
+    <Icon className="w-5 h-5 shrink-0" />
+    {label}
+  </button>
+);

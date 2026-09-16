@@ -233,23 +233,33 @@ export const getProfitAndLoss = asyncHandler(async (req: Request, res: Response)
   
   const revenueResult = await Order.aggregate([
     { $match: { ...match, status: 'COMPLETED' } },
-    { $group: { _id: null, revenue: { $sum: '$grandTotal' }, taxTotal: { $sum: '$taxTotal' } } }
+    { $group: { _id: null, revenue: { $sum: '$subtotal' }, taxTotal: { $sum: '$taxTotal' }, grossSales: { $sum: '$grandTotal' } } }
   ]);
   
   const expenseDateFilter = match.createdAt ? { date: match.createdAt } : {};
+  
   const expensesResult = await Expense.aggregate([
-    { $match: { ...getBaseMatch(req), ...expenseDateFilter } },
+    { $match: { ...getBaseMatch(req), ...expenseDateFilter, status: { $ne: 'REJECTED' } } },
     { $group: { _id: null, amount: { $sum: '$amount' } } }
   ]);
   
+  const purchaseDateFilter = match.createdAt ? { purchaseDate: match.createdAt } : {};
+  const purchasesResult = await Purchase.aggregate([
+    { $match: { ...getBaseMatch(req), ...purchaseDateFilter, status: { $ne: 'CANCELLED' } } },
+    { $group: { _id: null, amount: { $sum: '$totalAmount' } } }
+  ]);
+  
+  const grossSales = revenueResult[0]?.grossSales || 0;
   const revenue = revenueResult[0]?.revenue || 0;
   const taxes = revenueResult[0]?.taxTotal || 0;
   const expenses = expensesResult[0]?.amount || 0;
+  const purchases = purchasesResult[0]?.amount || 0;
   
-  const cogs = 0; // If raw material consumption is tracked, we can compute this. Defaulting to 0 for now.
-  const netProfit = revenue - cogs - expenses - taxes;
+  const cogs = purchases; // Approximation for restaurant until full recipe deduction is live
+  const grossProfit = revenue - cogs;
+  const netProfit = grossProfit - expenses;
   
-  res.json({ revenue, cogs, expenses, taxes, netProfit });
+  res.json({ grossSales, revenue, cogs, purchases, expenses, taxes, grossProfit, netProfit });
 });
 
 export const getGSTReport = asyncHandler(async (req: Request, res: Response) => {
