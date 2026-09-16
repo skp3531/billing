@@ -1,261 +1,258 @@
 import React, { useState, useEffect } from 'react';
+import { Plus, Search, Filter, BookOpen, LayoutGrid, Star, QrCode, Tag, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
+import { useAuthStore } from '../../store/authStore';
+import api from '../../api/axios';
 import { toast } from 'react-hot-toast';
-import { PlusIcon, PencilIcon, TrashIcon } from '@heroicons/react/24/outline';
-import { Category, MenuItem } from '../../types';
-import { getCategories, createCategory, updateCategory, deleteCategory } from '../../api/category.api';
-import { getMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from '../../api/menu.api';
-import CategoryForm from './CategoryForm';
+import clsx from 'clsx';
 import MenuItemForm from './MenuItemForm';
 
-const MenuPage = () => {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+export default function MenuPage() {
+  const { currentOutlet } = useAuthStore();
+  const [activeTab, setActiveTab] = useState('engineering'); // 'items', 'categories', 'engineering', 'qrmenu'
+  const [menuItems, setMenuItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [engineeringData, setEngineeringData] = useState<any>(null);
   
   const [loading, setLoading] = useState(true);
-  const [itemsLoading, setItemsLoading] = useState(false);
-  
-  const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [savingCategory, setSavingCategory] = useState(false);
+  const [showItemForm, setShowItemForm] = useState(false);
+  const [editingItem, setEditingItem] = useState(null);
 
-  const [showMenuItemForm, setShowMenuItemForm] = useState(false);
-  const [editingMenuItem, setEditingMenuItem] = useState<MenuItem | null>(null);
-  const [savingMenuItem, setSavingMenuItem] = useState(false);
+  useEffect(() => {
+    fetchData();
+  }, [currentOutlet]);
 
-  const fetchCategories = async () => {
-    setLoading(true);
+  const fetchData = async () => {
     try {
-      const data = await getCategories();
-      setCategories(data);
-      if (data.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(data[0]._id);
-      }
+      setLoading(true);
+      const [engRes, catRes] = await Promise.all([
+        api.get('/menu-items/engineering'),
+        api.get('/categories')
+      ]);
+      setEngineeringData(engRes.data.data);
+      setMenuItems(engRes.data.data.analyzedItems);
+      setCategories(catRes.data.data);
     } catch (err) {
-      toast.error('Failed to load categories');
+      toast.error('Failed to load Menu Engineering data');
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMenuItems = async () => {
-    if (!selectedCategoryId) return;
-    setItemsLoading(true);
-    try {
-      const data = await getMenuItems({ categoryId: selectedCategoryId });
-      setMenuItems(data);
-    } catch (err) {
-      toast.error('Failed to load menu items');
-    } finally {
-      setItemsLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  useEffect(() => {
-    fetchMenuItems();
-  }, [selectedCategoryId]);
-
-  // Category Handlers
-  const handleSaveCategory = async (data: Partial<Category>) => {
-    setSavingCategory(true);
-    try {
-      if (editingCategory) {
-        await updateCategory(editingCategory._id, data);
-        toast.success('Category updated');
-      } else {
-        await createCategory(data);
-        toast.success('Category created');
-      }
-      setShowCategoryForm(false);
-      fetchCategories();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save category');
-    } finally {
-      setSavingCategory(false);
-    }
-  };
-
-  const handleDeleteCategory = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!confirm('Delete this category? All associated menu items may be affected.')) return;
-    try {
-      await deleteCategory(id);
-      toast.success('Category deleted');
-      if (selectedCategoryId === id) setSelectedCategoryId(null);
-      fetchCategories();
-    } catch (err) {
-      toast.error('Failed to delete category');
-    }
-  };
-
-  // Menu Item Handlers
-  const handleSaveMenuItem = async (data: Partial<MenuItem>) => {
-    setSavingMenuItem(true);
-    try {
-      if (editingMenuItem) {
-        await updateMenuItem(editingMenuItem._id, data);
-        toast.success('Menu item updated');
-      } else {
-        await createMenuItem(data);
-        toast.success('Menu item created');
-      }
-      setShowMenuItemForm(false);
-      fetchMenuItems();
-    } catch (err: any) {
-      toast.error(err.response?.data?.message || 'Failed to save menu item');
-    } finally {
-      setSavingMenuItem(false);
-    }
-  };
-
-  const handleDeleteMenuItem = async (id: string) => {
-    if (!confirm('Delete this menu item?')) return;
-    try {
-      await deleteMenuItem(id);
-      toast.success('Menu item deleted');
-      fetchMenuItems();
-    } catch (err) {
-      toast.error('Failed to delete menu item');
-    }
-  };
+  const KPICard = ({ title, value, subtitle, icon: Icon, colorClass }: any) => (
+    <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm flex items-start gap-4">
+      <div className={clsx("p-3 rounded-xl", colorClass)}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div>
+        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">{title}</h3>
+        <p className="text-2xl font-black text-gray-900 mt-1">{value}</p>
+        <p className="text-xs font-bold text-gray-400 mt-1">{subtitle}</p>
+      </div>
+    </div>
+  );
 
   return (
-    <div className="h-full flex flex-col">
-      <div className="p-6 pb-4 shrink-0 border-b bg-white flex justify-between items-center">
+    <div className="p-6 max-w-7xl mx-auto space-y-6">
+      
+      {/* Header & Tabs */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
-          <p className="text-gray-500 text-sm mt-1">Organize your categories, items, variants, and modifiers.</p>
+          <h1 className="text-2xl font-black text-gray-900 flex items-center gap-2">
+            <BookOpen className="w-6 h-6 text-indigo-500" /> Menu Engineering
+          </h1>
+          <p className="text-gray-500 font-bold mt-1">Manage products, pricing, and profitability</p>
+        </div>
+        
+        <div className="flex bg-gray-100 p-1 rounded-xl">
+          <button onClick={() => setActiveTab('engineering')} className={clsx("px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2", activeTab === 'engineering' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500")}>
+            <TrendingUp className="w-4 h-4" /> Matrix
+          </button>
+          <button onClick={() => setActiveTab('items')} className={clsx("px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2", activeTab === 'items' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500")}>
+            <BookOpen className="w-4 h-4" /> Items
+          </button>
+          <button onClick={() => setActiveTab('categories')} className={clsx("px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2", activeTab === 'categories' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500")}>
+            <LayoutGrid className="w-4 h-4" /> Categories
+          </button>
+          <button onClick={() => setActiveTab('qrmenu')} className={clsx("px-4 py-2 rounded-lg text-sm font-bold flex items-center gap-2", activeTab === 'qrmenu' ? "bg-white text-indigo-600 shadow-sm" : "text-gray-500")}>
+            <QrCode className="w-4 h-4" /> QR Menu
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col md:flex-row overflow-hidden min-w-0">
-        {/* Left Pane - Categories */}
-        <div className="w-full md:w-1/4 md:min-w-[250px] bg-gray-50 border-b md:border-b-0 md:border-r flex flex-col max-h-44 md:max-h-none md:h-full shrink-0">
-          <div className="p-4 flex justify-between items-center border-b bg-gray-100">
-            <h2 className="font-semibold text-gray-700">Categories</h2>
-            <button
-              onClick={() => { setEditingCategory(null); setShowCategoryForm(true); }}
-              className="p-1.5 bg-amber-100 text-amber-700 hover:bg-amber-200 rounded-md transition-colors"
-              title="Add Category"
-            >
-              <PlusIcon className="w-4 h-4" />
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-2">
-            {loading ? (
-              <div className="flex justify-center p-4"><div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500" /></div>
-            ) : categories.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center p-4">No categories found.</p>
-            ) : (
-              <ul className="space-y-1">
-                {categories.map(cat => (
-                  <li key={cat._id} 
-                    onClick={() => setSelectedCategoryId(cat._id)}
-                    className={`flex justify-between items-center px-3 py-2.5 rounded-lg cursor-pointer transition-colors ${selectedCategoryId === cat._id ? 'bg-amber-100 text-amber-900' : 'hover:bg-gray-200 text-gray-700'}`}
-                  >
-                    <span className="font-medium text-sm truncate pr-2">{cat.name}</span>
-                    <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 sm:opacity-100">
-                      <button 
-                        onClick={(e) => { e.stopPropagation(); setEditingCategory(cat); setShowCategoryForm(true); }}
-                        className="p-1 text-gray-400 hover:text-amber-600 transition-colors"
-                      >
-                        <PencilIcon className="w-3.5 h-3.5" />
-                      </button>
-                      <button 
-                        onClick={(e) => handleDeleteCategory(cat._id, e)}
-                        className="p-1 text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <TrashIcon className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+      {loading ? (
+        <div className="text-center p-12 text-gray-500 font-bold">Loading Menu Engine...</div>
+      ) : (
+        <>
+          {activeTab === 'engineering' && (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <KPICard title="Total Items" value={engineeringData?.kpis?.totalItems} subtitle={`${engineeringData?.kpis?.activeItems} Active`} icon={BookOpen} colorClass="bg-indigo-50 text-indigo-600" />
+                <KPICard title="Out of Stock" value={engineeringData?.kpis?.outOfStock} subtitle="Needs inventory update" icon={AlertTriangle} colorClass="bg-rose-50 text-rose-600" />
+                <KPICard title="Avg Food Cost" value={`${engineeringData?.kpis?.avgCostPct?.toFixed(1)}%`} subtitle="Theoretical cost" icon={Tag} colorClass="bg-amber-50 text-amber-600" />
+                <KPICard title="Avg Gross Margin" value={`${engineeringData?.kpis?.avgMargin?.toFixed(1)}%`} subtitle="Overall profitability" icon={TrendingUp} colorClass="bg-emerald-50 text-emerald-600" />
+              </div>
 
-        {/* Right Pane - Menu Items */}
-        <div className="flex-1 bg-white flex flex-col h-full">
-          <div className="p-4 flex justify-between items-center border-b">
-            <h2 className="font-semibold text-gray-800">
-              {categories.find(c => c._id === selectedCategoryId)?.name || 'Menu Items'}
-            </h2>
-            <button
-              onClick={() => { 
-                if(!selectedCategoryId) { toast.error("Select a category first"); return; }
-                setEditingMenuItem(null); 
-                setShowMenuItemForm(true); 
-              }}
-              disabled={!selectedCategoryId}
-              className="flex items-center gap-2 bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-sm font-medium transition-colors disabled:opacity-50"
-            >
-              <PlusIcon className="w-4 h-4" />
-              Add Item
-            </button>
-          </div>
-          <div className="flex-1 overflow-y-auto p-6">
-            {!selectedCategoryId ? (
-              <div className="flex items-center justify-center h-full text-gray-400">
-                Select a category to view items
-              </div>
-            ) : itemsLoading ? (
-              <div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-amber-500" /></div>
-            ) : menuItems.length === 0 ? (
-              <div className="text-center p-8 text-gray-500">
-                No items in this category. Add your first item!
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {menuItems.map(item => (
-                  <div key={item._id} className="border rounded-xl p-4 flex flex-col hover:shadow-md transition-shadow">
-                    <div className="flex justify-between items-start mb-2">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${item.isVeg ? 'bg-green-500' : 'bg-red-500'}`} title={item.isVeg ? "Veg" : "Non-Veg"} />
-                        <h3 className="font-semibold text-gray-900">{item.name}</h3>
+              {/* BCG MATRIX */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* STARS */}
+                <div className="bg-white rounded-2xl p-6 border border-emerald-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><Star className="w-24 h-24 text-emerald-500" /></div>
+                  <h3 className="text-lg font-black text-emerald-700 mb-2">Stars (High Sales, High Profit)</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">Promote heavily. Highly profitable and popular.</p>
+                  <div className="space-y-3 relative z-10">
+                    {engineeringData?.matrix?.stars?.map((item: any) => (
+                      <div key={item._id} className="flex justify-between items-center bg-emerald-50/50 p-3 rounded-xl border border-emerald-100">
+                        <div>
+                          <p className="font-bold text-gray-900">{item.name}</p>
+                          <p className="text-xs font-bold text-gray-500">{item.qtySold} sold • {item.calculatedMargin.toFixed(1)}% margin</p>
+                        </div>
+                        <span className="font-black text-emerald-600">₹{item.basePrice}</span>
                       </div>
-                      <div className="flex items-center gap-1">
-                        <button onClick={() => { setEditingMenuItem(item); setShowMenuItemForm(true); }} className="p-1 text-gray-400 hover:text-amber-600"><PencilIcon className="w-4 h-4" /></button>
-                        <button onClick={() => handleDeleteMenuItem(item._id)} className="p-1 text-gray-400 hover:text-red-500"><TrashIcon className="w-4 h-4" /></button>
-                      </div>
-                    </div>
-                    <p className="text-xs text-gray-500 mb-2 line-clamp-2">{item.description}</p>
-                    <div className="mt-auto pt-2 flex items-center justify-between">
-                      <span className="font-bold text-gray-900">₹{item.basePrice.toFixed(2)}</span>
-                      <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{item.shortCode}</span>
-                    </div>
+                    ))}
+                    {engineeringData?.matrix?.stars?.length === 0 && <p className="text-sm text-gray-400 font-bold italic">No items match this criteria.</p>}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
+                </div>
 
-      {showCategoryForm && (
-        <CategoryForm
-          category={editingCategory}
-          onSave={handleSaveCategory}
-          onClose={() => setShowCategoryForm(false)}
-          saving={savingCategory}
-        />
+                {/* CASH COWS */}
+                <div className="bg-white rounded-2xl p-6 border border-indigo-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingUp className="w-24 h-24 text-indigo-500" /></div>
+                  <h3 className="text-lg font-black text-indigo-700 mb-2">Cash Cows (Low Sales, High Profit)</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">Highly profitable but lower volume. Needs marketing push.</p>
+                  <div className="space-y-3 relative z-10">
+                    {engineeringData?.matrix?.cashCows?.map((item: any) => (
+                      <div key={item._id} className="flex justify-between items-center bg-indigo-50/50 p-3 rounded-xl border border-indigo-100">
+                        <div>
+                          <p className="font-bold text-gray-900">{item.name}</p>
+                          <p className="text-xs font-bold text-gray-500">{item.qtySold} sold • {item.calculatedMargin.toFixed(1)}% margin</p>
+                        </div>
+                        <span className="font-black text-indigo-600">₹{item.basePrice}</span>
+                      </div>
+                    ))}
+                    {engineeringData?.matrix?.cashCows?.length === 0 && <p className="text-sm text-gray-400 font-bold italic">No items match this criteria.</p>}
+                  </div>
+                </div>
+
+                {/* QUESTION MARKS */}
+                <div className="bg-white rounded-2xl p-6 border border-amber-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><AlertTriangle className="w-24 h-24 text-amber-500" /></div>
+                  <h3 className="text-lg font-black text-amber-700 mb-2">Question Marks (High Sales, Low Profit)</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">Popular but low margin. Consider price increase or recipe tweak.</p>
+                  <div className="space-y-3 relative z-10">
+                    {engineeringData?.matrix?.questionMarks?.map((item: any) => (
+                      <div key={item._id} className="flex justify-between items-center bg-amber-50/50 p-3 rounded-xl border border-amber-100">
+                        <div>
+                          <p className="font-bold text-gray-900">{item.name}</p>
+                          <p className="text-xs font-bold text-gray-500">{item.qtySold} sold • {item.calculatedMargin.toFixed(1)}% margin</p>
+                        </div>
+                        <span className="font-black text-amber-600">₹{item.basePrice}</span>
+                      </div>
+                    ))}
+                    {engineeringData?.matrix?.questionMarks?.length === 0 && <p className="text-sm text-gray-400 font-bold italic">No items match this criteria.</p>}
+                  </div>
+                </div>
+
+                {/* DOGS */}
+                <div className="bg-white rounded-2xl p-6 border border-rose-200 shadow-sm relative overflow-hidden">
+                  <div className="absolute top-0 right-0 p-4 opacity-10"><TrendingDown className="w-24 h-24 text-rose-500" /></div>
+                  <h3 className="text-lg font-black text-rose-700 mb-2">Dogs (Low Sales, Low Profit)</h3>
+                  <p className="text-sm font-bold text-gray-500 mb-4">Underperforming. Consider removing from menu.</p>
+                  <div className="space-y-3 relative z-10">
+                    {engineeringData?.matrix?.dogs?.map((item: any) => (
+                      <div key={item._id} className="flex justify-between items-center bg-rose-50/50 p-3 rounded-xl border border-rose-100">
+                        <div>
+                          <p className="font-bold text-gray-900">{item.name}</p>
+                          <p className="text-xs font-bold text-gray-500">{item.qtySold} sold • {item.calculatedMargin.toFixed(1)}% margin</p>
+                        </div>
+                        <span className="font-black text-rose-600">₹{item.basePrice}</span>
+                      </div>
+                    ))}
+                    {engineeringData?.matrix?.dogs?.length === 0 && <p className="text-sm text-gray-400 font-bold italic">No items match this criteria.</p>}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'items' && (
+            <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <div className="relative w-64">
+                  <Search className="w-5 h-5 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input type="text" placeholder="Search menu..." className="w-full pl-10 pr-4 py-2 bg-white border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none" />
+                </div>
+                <button onClick={() => { setEditingItem(null); setShowItemForm(true); }} className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 flex items-center gap-2">
+                  <Plus className="w-4 h-4" /> Add Item
+                </button>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50 text-gray-500 font-bold">
+                    <tr>
+                      <th className="px-6 py-4">Item Name</th>
+                      <th className="px-6 py-4">Category</th>
+                      <th className="px-6 py-4">Price</th>
+                      <th className="px-6 py-4">Est. Cost</th>
+                      <th className="px-6 py-4">Margin</th>
+                      <th className="px-6 py-4">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {menuItems.map((item: any) => (
+                      <tr key={item._id} className="hover:bg-gray-50 cursor-pointer" onClick={() => { setEditingItem(item); setShowItemForm(true); }}>
+                        <td className="px-6 py-4">
+                          <div className="font-bold text-gray-900">{item.name}</div>
+                          {item.sku && <div className="text-xs text-gray-500">SKU: {item.sku}</div>}
+                        </td>
+                        <td className="px-6 py-4 text-gray-600 font-bold">{item.categoryId?.name}</td>
+                        <td className="px-6 py-4 font-black text-gray-900">₹{item.basePrice}</td>
+                        <td className="px-6 py-4 font-bold text-gray-500">₹{item.calculatedCost?.toFixed(2) || '0.00'}</td>
+                        <td className="px-6 py-4">
+                           <span className={clsx("px-2 py-1 rounded-lg font-bold text-xs", item.calculatedMargin > 60 ? "bg-emerald-100 text-emerald-700" : item.calculatedMargin > 30 ? "bg-amber-100 text-amber-700" : "bg-rose-100 text-rose-700")}>
+                             {item.calculatedMargin?.toFixed(1)}%
+                           </span>
+                        </td>
+                        <td className="px-6 py-4">
+                          {item.isOutOfStock ? (
+                            <span className="px-2 py-1 bg-rose-100 text-rose-700 rounded-lg font-bold text-xs">Out of Stock</span>
+                          ) : (
+                            <span className="px-2 py-1 bg-emerald-100 text-emerald-700 rounded-lg font-bold text-xs">Active</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+          
+          {activeTab === 'categories' && (
+            <div className="text-center p-12 text-gray-500 font-bold border border-dashed border-gray-300 rounded-2xl bg-gray-50">
+               Advanced Category Management Module coming in Phase 3!
+            </div>
+          )}
+          
+          {activeTab === 'qrmenu' && (
+            <div className="text-center p-12 text-gray-500 font-bold border border-dashed border-gray-300 rounded-2xl bg-gray-50">
+               QR Menu Preview Module coming in Phase 4!
+            </div>
+          )}
+        </>
       )}
 
-      {showMenuItemForm && (
-        <MenuItemForm
-          item={editingMenuItem}
+      {showItemForm && (
+        <MenuItemForm 
+          item={editingItem}
+          saving={false} 
           categories={categories}
-          onSave={handleSaveMenuItem}
-          onClose={() => setShowMenuItemForm(false)}
-          saving={savingMenuItem}
+          onClose={() => setShowItemForm(false)} 
+          onSave={async () => {
+            setShowItemForm(false);
+            fetchData();
+          }} 
         />
       )}
     </div>
   );
-};
-
-export default MenuPage;
+}
