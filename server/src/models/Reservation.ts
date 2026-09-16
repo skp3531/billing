@@ -1,17 +1,17 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IReservation extends Document {
   organizationId: mongoose.Types.ObjectId;
   outletId: mongoose.Types.ObjectId;
+  customerId?: mongoose.Types.ObjectId;
   customerName: string;
-  mobileNumber: string;
+  customerPhone: string;
+  partySize: number;
   reservationDate: Date;
-  reservationTime: string; // HH:mm format
-  guests: number;
-  seatingPreference?: string;
-  notes?: string;
-  status: 'BOOKED' | 'CONFIRMED' | 'CHECKED_IN' | 'COMPLETED' | 'CANCELLED' | 'NO_SHOW';
-  assignedTableId?: mongoose.Types.ObjectId;
+  timeSlot: string;
+  tableId?: mongoose.Types.ObjectId;
+  status: 'PENDING' | 'CONFIRMED' | 'SEATED' | 'CANCELLED' | 'NO_SHOW';
+  specialRequests?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -20,23 +20,21 @@ const reservationSchema = new Schema<IReservation>(
   {
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
     outletId: { type: Schema.Types.ObjectId, ref: 'Outlet', required: true, index: true },
+    customerId: { type: Schema.Types.ObjectId, ref: 'Customer' },
     customerName: { type: String, required: true },
-    mobileNumber: { type: String, required: true },
+    customerPhone: { type: String, required: true },
+    partySize: { type: Number, required: true, min: 1 },
     reservationDate: { type: Date, required: true },
-    reservationTime: { type: String, required: true },
-    guests: { type: Number, required: true, min: 1 },
-    seatingPreference: { type: String },
-    notes: { type: String },
+    timeSlot: { type: String, required: true }, // e.g. "19:30"
+    tableId: { type: Schema.Types.ObjectId, ref: 'Table' },
     status: {
       type: String,
-      enum: ['BOOKED', 'CONFIRMED', 'CHECKED_IN', 'COMPLETED', 'CANCELLED', 'NO_SHOW'],
-      default: 'BOOKED'
+      enum: ['PENDING', 'CONFIRMED', 'SEATED', 'CANCELLED', 'NO_SHOW'],
+      default: 'PENDING',
     },
-    assignedTableId: { type: Schema.Types.ObjectId, ref: 'Table' }
+    specialRequests: String,
   },
   { timestamps: true }
 );
-
-reservationSchema.index({ outletId: 1, reservationDate: 1 });
 
 export default mongoose.model<IReservation>('Reservation', reservationSchema);

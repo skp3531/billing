@@ -1,14 +1,15 @@
-import mongoose, { Document, Schema } from 'mongoose';
+import mongoose, { Schema, Document } from 'mongoose';
 
 export interface IWaitlist extends Document {
   organizationId: mongoose.Types.ObjectId;
   outletId: mongoose.Types.ObjectId;
   customerName: string;
-  mobileNumber: string;
-  guests: number;
-  estimatedWaitTime: number; // in minutes
+  customerPhone: string;
+  partySize: number;
+  quotedWaitTime: number; // in minutes
   status: 'WAITING' | 'NOTIFIED' | 'SEATED' | 'LEFT';
-  createdAt: Date; // Treated as "Waiting Since"
+  notes?: string;
+  createdAt: Date;
   updatedAt: Date;
 }
 
@@ -17,18 +18,17 @@ const waitlistSchema = new Schema<IWaitlist>(
     organizationId: { type: Schema.Types.ObjectId, ref: 'Organization', required: true, index: true },
     outletId: { type: Schema.Types.ObjectId, ref: 'Outlet', required: true, index: true },
     customerName: { type: String, required: true },
-    mobileNumber: { type: String, required: true },
-    guests: { type: Number, required: true, min: 1 },
-    estimatedWaitTime: { type: Number, default: 15 },
+    customerPhone: { type: String, required: true },
+    partySize: { type: Number, required: true, min: 1 },
+    quotedWaitTime: { type: Number, default: 15 },
     status: {
       type: String,
       enum: ['WAITING', 'NOTIFIED', 'SEATED', 'LEFT'],
-      default: 'WAITING'
-    }
+      default: 'WAITING',
+    },
+    notes: String,
   },
   { timestamps: true }
 );
-
-waitlistSchema.index({ outletId: 1, status: 1 });
 
 export default mongoose.model<IWaitlist>('Waitlist', waitlistSchema);

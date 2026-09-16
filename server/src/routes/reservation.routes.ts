@@ -1,5 +1,8 @@
 import { Router } from 'express';
-import { getReservations, createReservation, updateReservation, deleteReservation } from '../controllers/reservation.controller';
+import { 
+  getReservations, createReservation, updateReservationStatus,
+  getWaitlist, addToWaitlist, updateWaitlistStatus
+} from '../controllers/reservation.controller';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -7,7 +10,10 @@ router.use(authenticate);
 
 router.get('/', getReservations);
 router.post('/', createReservation);
-router.put('/:id', updateReservation);
-router.delete('/:id', deleteReservation);
+router.patch('/:id/status', updateReservationStatus);
+
+router.get('/waitlist', getWaitlist);
+router.post('/waitlist', addToWaitlist);
+router.patch('/waitlist/:id/status', updateWaitlistStatus);
 
 export default router;
