@@ -1,6 +1,13 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITable extends Document {
+  rotation?: number;
+  width?: number;
+  height?: number;
+  assignedWaiterId?: mongoose.Types.ObjectId;
+  guestsSeated?: number;
+  occupiedSince?: Date;
+  linkedOrderIds?: mongoose.Types.ObjectId[];
   floorPlan?: string;
   shape?: 'square' | 'rectangle' | 'circle';
   positionX?: number;
@@ -10,7 +17,7 @@ export interface ITable extends Document {
   outletId?: mongoose.Types.ObjectId;
   name: string; // or number
   capacity: number;
-  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED';
+  status: 'AVAILABLE' | 'OCCUPIED' | 'RESERVED' | 'BILLING_PENDING' | 'CLEANING' | 'DISABLED';
   createdAt: Date;
   updatedAt: Date;
 }
@@ -42,10 +49,17 @@ const tableSchema = new Schema<ITable>(
     shape: { type: String, enum: ['square', 'rectangle', 'circle'], default: 'square' },
     positionX: { type: Number, default: 0 },
     positionY: { type: Number, default: 0 },
+    rotation: { type: Number, default: 0 },
+    width: { type: Number, default: 80 },
+    height: { type: Number, default: 80 },
+    assignedWaiterId: { type: Schema.Types.ObjectId, ref: 'User' },
+    guestsSeated: { type: Number, default: 0 },
+    occupiedSince: { type: Date },
+    linkedOrderIds: [{ type: Schema.Types.ObjectId, ref: 'Order' }],
     currentOrderId: { type: Schema.Types.ObjectId, ref: 'Order' },
     status: {
       type: String,
-      enum: ['AVAILABLE', 'OCCUPIED', 'RESERVED'],
+      enum: ['AVAILABLE', 'OCCUPIED', 'RESERVED', 'BILLING_PENDING', 'CLEANING', 'DISABLED'],
       default: 'AVAILABLE',
     },
   },
