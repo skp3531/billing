@@ -1,6 +1,11 @@
 import api from './axios';
 
 export interface Table {
+  floorPlan?: string;
+  shape?: 'square' | 'rectangle' | 'circle';
+  positionX?: number;
+  positionY?: number;
+  currentOrderId?: string;
   _id: string;
   organizationId: string;
   outletId?: string;

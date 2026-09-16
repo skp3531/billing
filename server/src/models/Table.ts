@@ -1,6 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ITable extends Document {
+  floorPlan?: string;
+  shape?: 'square' | 'rectangle' | 'circle';
+  positionX?: number;
+  positionY?: number;
+  currentOrderId?: mongoose.Types.ObjectId;
   organizationId: mongoose.Types.ObjectId;
   outletId?: mongoose.Types.ObjectId;
   name: string; // or number
@@ -33,6 +38,11 @@ const tableSchema = new Schema<ITable>(
       min: 1,
       default: 4,
     },
+    floorPlan: { type: String, default: 'Main Dining' },
+    shape: { type: String, enum: ['square', 'rectangle', 'circle'], default: 'square' },
+    positionX: { type: Number, default: 0 },
+    positionY: { type: Number, default: 0 },
+    currentOrderId: { type: Schema.Types.ObjectId, ref: 'Order' },
     status: {
       type: String,
       enum: ['AVAILABLE', 'OCCUPIED', 'RESERVED'],

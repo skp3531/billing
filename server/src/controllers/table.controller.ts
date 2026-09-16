@@ -4,7 +4,7 @@ import Table from '../models/Table';
 // Create a new table
 export const createTable = async (req: Request, res: Response) => {
   try {
-    const { name, capacity, status, outletId } = req.body;
+    const { name, capacity, status, outletId, floorPlan, shape, positionX, positionY, currentOrderId } = req.body;
     const organizationId = req.user?.organizationId;
 
     if (!organizationId) {
@@ -63,12 +63,12 @@ export const getTableById = async (req: Request, res: Response) => {
 export const updateTable = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { name, capacity, status, outletId } = req.body;
+    const { name, capacity, status, outletId, floorPlan, shape, positionX, positionY, currentOrderId } = req.body;
     const organizationId = req.user?.organizationId;
 
     const table = await Table.findOneAndUpdate(
       { _id: id, organizationId },
-      { name, capacity, status, outletId },
+      { name, capacity, status, outletId, floorPlan, shape, positionX, positionY, currentOrderId },
       { new: true, runValidators: true }
     );
 

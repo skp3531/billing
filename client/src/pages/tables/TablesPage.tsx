@@ -1,22 +1,39 @@
 import React, { useEffect, useState } from 'react';
-import { getTables, createTable, updateTable, deleteTable, Table } from '../../api/table.api';
-import toast from 'react-hot-toast';
-import { useNavigate } from 'react-router-dom';
+import { getTables, createTable, updateTable, Table } from '../../api/table.api';
+import { toast } from 'react-hot-toast';
+import { useAuthStore } from '../../store/authStore';
+import { FloorPlanGrid } from './components/FloorPlanGrid';
+import { TableSidebar } from './components/TableSidebar';
+import { LayoutDashboard } from 'lucide-react';
+import clsx from 'clsx';
 
 export default function TablesPage() {
-  const navigate = useNavigate();
+  const { currentOutlet } = useAuthStore();
   const [tables, setTables] = useState<Table[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentTable, setCurrentTable] = useState<Partial<Table> | null>(null);
+  
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [floorPlans, setFloorPlans] = useState<string[]>(['Main Dining', 'Patio']);
+  const [activePlan, setActivePlan] = useState<string>('Main Dining');
+  
+  // Local state for dragging before saving to DB
+  const [localTables, setLocalTables] = useState<Table[]>([]);
 
   const fetchTables = async () => {
+    if (!currentOutlet) return;
     try {
       setLoading(true);
       const data = await getTables();
       setTables(data);
+      setLocalTables(data);
+      
+      const uniquePlans = Array.from(new Set(data.map((t: Table) => t.floorPlan).filter(Boolean))) as string[];
+      if (uniquePlans.length > 0) {
+        // Only override if we found plans in DB and it's not in our defaults
+        setFloorPlans(Array.from(new Set([...floorPlans, ...uniquePlans])));
+      }
     } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Failed to fetch tables');
+      toast.error('Failed to fetch tables');
     } finally {
       setLoading(false);
     }
@@ -24,143 +41,104 @@ export default function TablesPage() {
 
   useEffect(() => {
     fetchTables();
-  }, []);
+  }, [currentOutlet]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleTableUpdateLocal = (tableId: string, updates: Partial<Table>) => {
+    setLocalTables(prev => prev.map(t => t._id === tableId ? { ...t, ...updates } : t));
+  };
+
+  const handleSaveLayout = async () => {
     try {
-      if (currentTable?._id) {
-        await updateTable(currentTable._id, currentTable);
-        toast.success('Table updated');
-      } else {
-        await createTable(currentTable as Partial<Table>);
-        toast.success('Table created');
-      }
-      setIsModalOpen(false);
-      setCurrentTable(null);
-      fetchTables();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || 'Error saving table');
+      const promises = localTables.map(t => updateTable(t._id!, t));
+      await Promise.all(promises);
+      toast.success('Floor plan layout saved!');
+      setIsEditMode(false);
+      setTables(localTables);
+    } catch (err) {
+      toast.error('Failed to save layout');
     }
   };
 
-  const handleStatusChange = async (id: string, status: Table['status']) => {
+  const handleAddTable = async (tableData: any) => {
     try {
-      await updateTable(id, { status });
-      fetchTables();
-    } catch (error: any) {
-      toast.error('Failed to update status');
+      if (!currentOutlet) return;
+      const data = { ...tableData, floorPlan: activePlan, outletId: currentOutlet._id };
+      const newTable = await createTable(data);
+      setTables(prev => [...prev, newTable]);
+      setLocalTables(prev => [...prev, newTable]);
+      toast.success(`Table ${newTable.name} added`);
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Failed to add table');
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Are you sure?')) return;
-    try {
-      await deleteTable(id);
-      toast.success('Table deleted');
-      fetchTables();
-    } catch (error: any) {
-      toast.error('Failed to delete table');
+  const handleTableClick = (table: Table) => {
+    if (table.status === 'AVAILABLE') {
+      // In a real app, this would route to POS with table selected
+      toast.success(`Starting new order for ${table.name}`);
+    } else {
+      toast('Managing active order (Phase 2 feature)');
     }
   };
 
-  if (loading) return <div className="p-4">Loading...</div>;
+  if (loading) return <div className="h-screen flex items-center justify-center">Loading Tables...</div>;
+
+  const currentFloorTables = localTables.filter(t => (t.floorPlan || 'Main Dining') === activePlan);
 
   return (
-    <div className="p-6">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-amber-900">Tables Management</h1>
-        <button
-          onClick={() => {
-            setCurrentTable({ name: '', capacity: 4, status: 'AVAILABLE' });
-            setIsModalOpen(true);
-          }}
-          className="bg-amber-600 text-white px-4 py-2 rounded-md hover:bg-amber-700"
-        >
-          Add Table
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {tables.map((table) => (
-          <div
-            key={table._id}
-            className={`p-4 rounded-lg shadow border-l-4 ${
-              table.status === 'AVAILABLE'
-                ? 'border-green-500 bg-white'
-                : table.status === 'OCCUPIED'
-                ? 'border-red-500 bg-white'
-                : 'border-yellow-500 bg-white'
-            }`}
-          >
-            <div className="flex justify-between items-start mb-2">
-              <h3 className="text-xl font-bold text-gray-800">{table.name}</h3>
-              <div className="flex space-x-2 text-sm">
-                <button onClick={() => { setCurrentTable(table); setIsModalOpen(true); }} className="text-blue-500 hover:underline">Edit</button>
-                <button onClick={() => handleDelete(table._id)} className="text-red-500 hover:underline">Delete</button>
-              </div>
-            </div>
-            <p className="text-gray-600 mb-4">Capacity: {table.capacity}</p>
-            
-            <div className="flex gap-2 flex-wrap">
-              {table.status === 'AVAILABLE' ? (
-                <>
-                  <button onClick={() => navigate(`/pos?table=${table.name}`)} className="bg-green-100 text-green-700 px-3 py-1.5 rounded text-sm font-bold flex-1 hover:bg-green-200">Seat Customer</button>
-                  <button onClick={() => handleStatusChange(table._id, 'RESERVED')} className="bg-amber-100 text-amber-700 px-3 py-1.5 rounded text-sm font-bold flex-1 hover:bg-amber-200">Reserve</button>
-                </>
-              ) : (
-                <button onClick={() => handleStatusChange(table._id, 'AVAILABLE')} className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded text-sm font-bold flex-1 hover:bg-gray-200">Free Table</button>
-              )}
-            </div>
+    <div className="flex flex-col h-[calc(100vh-4rem)] bg-white overflow-hidden">
+      
+      <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-white shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            <LayoutDashboard className="w-6 h-6" />
           </div>
-        ))}
-      </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-lg p-6 max-w-md w-full">
-            <h2 className="text-xl font-bold mb-4">{currentTable?._id ? 'Edit Table' : 'Add Table'}</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name / Number</label>
-                <input
-                  type="text"
-                  required
-                  value={currentTable?.name || ''}
-                  onChange={(e) => setCurrentTable({ ...currentTable, name: e.target.value })}
-                  className="w-full border-gray-300 rounded-md shadow-sm focus:border-amber-500 focus:ring-amber-500"
-                />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
-                <input
-                  type="number"
-                  required
-                  min="1"
-                  value={currentTable?.capacity || 4}
-                  onChange={(e) => setCurrentTable({ ...currentTable, capacity: parseInt(e.target.value) })}
-                  className="w-full border-gray-300 rounded-md shadow-sm focus:border-amber-500 focus:ring-amber-500"
-                />
-              </div>
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-amber-600 text-white rounded-md hover:bg-amber-700"
-                >
-                  Save
-                </button>
-              </div>
-            </form>
+          <div>
+            <h1 className="text-xl font-black text-gray-900">Table Management</h1>
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-0.5">Floor Plan Editor</p>
           </div>
         </div>
-      )}
+        
+        {/* Floor Plan Tabs */}
+        <div className="flex bg-gray-100 p-1.5 rounded-xl">
+          {floorPlans.map(plan => (
+            <button
+              key={plan}
+              onClick={() => setActivePlan(plan)}
+              className={clsx(
+                "px-5 py-2 rounded-lg font-bold text-sm transition-all",
+                activePlan === plan 
+                  ? "bg-white text-gray-900 shadow-sm" 
+                  : "text-gray-500 hover:text-gray-700"
+              )}
+            >
+              {plan}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex flex-1 overflow-hidden bg-gray-50 p-6 gap-6">
+        <div className="flex-1 bg-white rounded-2xl shadow-sm border border-gray-100 p-4">
+          <FloorPlanGrid 
+            tables={currentFloorTables} 
+            isEditMode={isEditMode} 
+            onTableUpdate={handleTableUpdateLocal}
+            onTableClick={handleTableClick}
+          />
+        </div>
+        
+        <TableSidebar 
+          isEditMode={isEditMode}
+          onAddTable={handleAddTable}
+          onSaveLayout={handleSaveLayout}
+          onToggleMode={() => {
+            setIsEditMode(!isEditMode);
+            if (isEditMode) setLocalTables(tables); // revert changes if cancelled
+          }}
+        />
+      </div>
+
     </div>
   );
 }
