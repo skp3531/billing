@@ -7,6 +7,7 @@ import { orderApi } from '../../api/order.api';
 import { OrderDashboardKPIs } from './components/OrderDashboardKPIs';
 import { OrdersList } from './components/OrdersList';
 import { OrderDetailsDrawer } from './components/OrderDetailsDrawer';
+import { OrdersKanbanBoard } from './components/OrdersKanbanBoard';
 import { LayoutDashboard, ListTodo } from 'lucide-react';
 import clsx from 'clsx';
 import { format } from 'date-fns';
@@ -56,22 +57,36 @@ const OrdersContent = () => {
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (silent = false) => {
     if (!currentOutlet) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await orderApi.getOrders(currentOutlet._id, { startDate: startDate.toISOString(), endDate: endDate.toISOString(), limit: 500 });
       setOrders(data.data);
     } catch (err) {
-      toast.error('Failed to load orders');
+      if (!silent) toast.error('Failed to load orders');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchOrders();
+    const intervalId = setInterval(() => {
+      fetchOrders(true);
+    }, 15000); // 15 seconds polling for SLA and live orders
+    return () => clearInterval(intervalId);
   }, [currentOutlet, startDate, endDate]);
+
+  const handleStatusChange = async (orderId: string, newStatus: string) => {
+    try {
+      await orderApi.updateOrderStatus(orderId, newStatus);
+      toast.success(`Order moved to ${newStatus}`);
+      fetchOrders(true);
+    } catch (err) {
+      toast.error('Failed to update status');
+    }
+  };
 
   const handleOrderClick = (order: Order) => {
     setSelectedOrder(order);
@@ -109,9 +124,7 @@ const OrdersContent = () => {
         ) : view === 'list' ? (
           <OrdersList orders={orders} onOrderClick={handleOrderClick} />
         ) : (
-          <div className="bg-white p-12 rounded-xl border border-gray-100 text-center font-bold text-gray-500 shadow-sm">
-            Kanban Board View (Coming in Phase 2)
-          </div>
+          <OrdersKanbanBoard orders={orders} onOrderClick={handleOrderClick} onStatusChange={handleStatusChange} />
         )}
       </div>
 
