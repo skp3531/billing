@@ -37,4 +37,5 @@ const reservationSchema = new Schema<IReservation>(
   { timestamps: true }
 );
 
+reservationSchema.index({ organizationId: 1, reservationDate: 1, status: 1 });
 export default mongoose.model<IReservation>('Reservation', reservationSchema);

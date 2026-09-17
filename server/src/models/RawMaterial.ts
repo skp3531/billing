@@ -34,4 +34,5 @@ const rawMaterialSchema = new Schema<IRawMaterial>(
   { timestamps: true }
 );
 
+rawMaterialSchema.index({ organizationId: 1, outletId: 1, category: 1 });
 export default mongoose.model<IRawMaterial>('RawMaterial', rawMaterialSchema);

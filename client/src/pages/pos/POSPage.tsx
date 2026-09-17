@@ -36,11 +36,31 @@ const POSPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
 
-  const [cart, setCart] = useState<CartItem[]>([]);
-  const [orderType, setOrderType] = useState<OrderType>('takeaway');
+  const [cart, setCart] = useState<CartItem[]>(() => {
+    const saved = localStorage.getItem('pos_cart');
+    return saved ? JSON.parse(saved) : [];
+  });
+  
+  useEffect(() => {
+    localStorage.setItem('pos_cart', JSON.stringify(cart));
+  }, [cart]);
+  const [orderType, setOrderType] = useState<OrderType>(() => {
+    const saved = localStorage.getItem('pos_orderType');
+    return (saved as OrderType) || 'takeaway';
+  });
+  useEffect(() => {
+    localStorage.setItem('pos_orderType', orderType);
+  }, [orderType]);
   const [showCheckout, setShowCheckout] = useState(false);
   const [showCustomer, setShowCustomer] = useState(false);
-  const [customer, setCustomer] = useState<any>(null);
+  const [customer, setCustomer] = useState<any>(() => {
+    const saved = localStorage.getItem('pos_customer');
+    return saved ? JSON.parse(saved) : null;
+  });
+  useEffect(() => {
+    if (customer) localStorage.setItem('pos_customer', JSON.stringify(customer));
+    else localStorage.removeItem('pos_customer');
+  }, [customer]);
   const [loyaltyPointsUsed, setLoyaltyPointsUsed] = useState(0);
   
   useEffect(() => {

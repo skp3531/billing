@@ -105,4 +105,5 @@ const purchaseSchema = new Schema<IPurchase>(
   { timestamps: true }
 );
 
+purchaseSchema.index({ organizationId: 1, outletId: 1, purchaseDate: 1, status: 1 });
 export default mongoose.model<IPurchase>('Purchase', purchaseSchema);
