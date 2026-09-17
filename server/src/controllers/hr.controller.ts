@@ -3,7 +3,7 @@ import { Attendance } from '../models/Attendance';
 import { Shift } from '../models/Shift';
 import { LeaveRequest } from '../models/LeaveRequest';
 import { Payslip } from '../models/Payslip';
-import { Order } from '../models/Order';
+import Order from '../models/Order';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 
 export const getAttendance = async (req: Request, res: Response) => {
@@ -38,7 +38,7 @@ export const clockIn = async (req: Request, res: Response) => {
   if (!att) {
     att = new Attendance({
       organizationId: req.user!.organizationId,
-      outletId: outletId || req.user!.currentOutletId,
+      outletId: outletId || (req.user!.outletIds && req.user!.outletIds[0]),
       userId,
       date: new Date(),
       checkIn: new Date(),
@@ -91,7 +91,7 @@ export const getLeaves = async (req: Request, res: Response) => {
 export const applyLeave = async (req: Request, res: Response) => {
   const leave = new LeaveRequest({
     ...req.body,
-    userId: req.user!.id,
+    userId: req.user!.userId,
     organizationId: req.user!.organizationId,
   });
   await leave.save();
@@ -101,7 +101,7 @@ export const applyLeave = async (req: Request, res: Response) => {
 export const updateLeaveStatus = async (req: Request, res: Response) => {
   const leave = await LeaveRequest.findOneAndUpdate(
     { _id: req.params.id, organizationId: req.user!.organizationId },
-    { $set: { status: req.body.status, approvedBy: req.user!.id } },
+    { $set: { status: req.body.status, approvedBy: req.user!.userId } },
     { new: true }
   );
   if (!leave) return errorResponse(res, 'Leave not found', 404);

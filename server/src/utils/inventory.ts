@@ -46,7 +46,7 @@ export const deductInventoryForOrder = async (order: any, session?: mongoose.Cli
     // Check inventory levels before deducting
     const materialIds = Array.from(deductions.keys());
     const org = await Organization.findById(order.organizationId).session(session || null);
-    const allowNegativeStock = org?.allowNegativeStock ?? false;
+    const allowNegativeStock = (org as any)?.allowNegativeStock ?? false;
 
     const materials = await RawMaterial.find({ 
       _id: { $in: materialIds },

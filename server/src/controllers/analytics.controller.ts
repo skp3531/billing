@@ -1,3 +1,6 @@
+import Purchase from "../models/Purchase";
+import RawMaterial from "../models/RawMaterial";
+
 import { Request, Response } from 'express';
 import mongoose from 'mongoose';
 import { asyncHandler } from '../middleware/asyncHandler';
@@ -255,7 +258,7 @@ export const getProfitAndLoss = asyncHandler(async (req: Request, res: Response)
   const allMaterials = await RawMaterial.find({ organizationId: req.user!.organizationId }).lean();
   
   const materialMap = new Map();
-  allMaterials.forEach(m => materialMap.set(m._id.toString(), m.unitCost || 0));
+  allMaterials.forEach((m: any) => materialMap.set(m._id.toString(), m.unitCost || 0));
   
   const itemCogsMap = new Map();
   allItems.forEach(item => {

@@ -224,9 +224,7 @@ export const createOrder = async (req: Request, res: Response) => {
     }
 
     if (order.status === 'COMPLETED') {
-      await updateCustomerCRMForOrder(order, true);
-    }
-      );
+      
     }
 
     // Audit Logging
@@ -327,10 +325,10 @@ export const updateOrderStatus = async (req: Request, res: Response) => {
   // Inventory Deduction Logic
   if (status && status.toUpperCase() === 'COMPLETED' && oldStatus !== 'COMPLETED') {
     await deductInventoryForOrder(savedOrder);
-    await updateCustomerCRMForOrder(savedOrder, true);
+    
   } else if (status && status.toUpperCase() === 'CANCELLED' && oldStatus === 'COMPLETED') {
     await restoreInventoryForOrder(savedOrder);
-    await updateCustomerCRMForOrder(savedOrder, false);
+    
   }
 
   if (status && (status.toUpperCase() === 'COMPLETED' || status.toUpperCase() === 'CANCELLED') && oldStatus !== status.toUpperCase()) {

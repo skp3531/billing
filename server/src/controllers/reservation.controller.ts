@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import Reservation from '../models/Reservation';
 import Waitlist from '../models/Waitlist';
-import { Table } from '../models/Table';
+import Table from '../models/Table';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 
 // --- RESERVATIONS ---
@@ -49,17 +49,6 @@ export const updateReservationStatus = async (req: Request, res: Response) => {
       { $set: { status: 'OCCUPIED' } }
     );
   }
-  
-  if (!reservation) return errorResponse(res, 'Reservation not found', 404);
-  return successResponse(res, reservation, 'Reservation updated');
-};
-  if (tableId) updateData.tableId = tableId;
-
-  const reservation = await Reservation.findOneAndUpdate(
-    { _id: req.params.id, organizationId: req.user!.organizationId },
-    { $set: updateData },
-    { new: true }
-  ).populate('tableId');
   
   if (!reservation) return errorResponse(res, 'Reservation not found', 404);
   return successResponse(res, reservation, 'Reservation updated');
