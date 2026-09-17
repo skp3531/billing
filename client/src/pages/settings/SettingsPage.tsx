@@ -20,7 +20,7 @@ export default function SettingsPage() {
 
   const fetchData = async () => {
     try {
-      const res = await api.get('/organization/command-center');
+      const res = await api.get('/organizations/command-center');
       setData(res.data.data);
     } catch {
       toast.error('Failed to fetch settings');

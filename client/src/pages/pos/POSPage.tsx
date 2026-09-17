@@ -154,6 +154,7 @@ const POSPage = () => {
   const handleCheckoutConfirm = async (method: PaymentMethod, splits?: any[]) => {
     try {
       const orderPayload = {
+        outletId: currentOutlet?._id,
         orderType,
         paymentMethod: method,
         splitPayments: splits,

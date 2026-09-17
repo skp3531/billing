@@ -144,7 +144,19 @@ export const refresh = async (req: Request, res: Response) => {
 
 export const getMe = async (req: Request, res: Response) => {
   const user = await User.findById(req.user!.userId)
-    .populate('roleId')
+    .populate<{ roleId: any }>('roleId')
     .populate('outletIds');
-  return successResponse(res, user);
+    
+  if (!user) return errorResponse(res, 'User not found', 404);
+  
+  const userObj = user.toObject();
+  delete (userObj as any).passwordHash;
+  
+  const role = user.roleId;
+
+  return successResponse(res, {
+    ...userObj,
+    roleName: role?.name,
+    permissions: role?.permissions || []
+  });
 };

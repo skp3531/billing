@@ -93,7 +93,8 @@ function App() {
           <Route path="purchases" element={<PermissionGuard permission="purchases.view"><PurchasesPage /></PermissionGuard>} />
           <Route path="suppliers" element={<PermissionGuard permission="suppliers.view"><SuppliersPage /></PermissionGuard>} />
           <Route path="customers" element={<PermissionGuard permission="customers.view"><CustomersPage /></PermissionGuard>} />
-          <Route path="staff" element={<PermissionGuard permission="staff.view"><UsersPage /></PermissionGuard>} />
+          <Route path="users" element={<PermissionGuard permission="staff.view"><UsersPage /></PermissionGuard>} />
+          <Route path="hr" element={<PermissionGuard permission="staff.view"><HRDashboard /></PermissionGuard>} />
           <Route path="expenses" element={<PermissionGuard permission="expenses.view"><ExpensesPage /></PermissionGuard>} />
           <Route path="reports" element={<PermissionGuard permission="reports.view"><ReportsLayout /></PermissionGuard>}>
             <Route index element={<Navigate to="dashboard" replace />} />

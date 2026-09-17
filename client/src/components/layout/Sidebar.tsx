@@ -22,8 +22,8 @@ export const navItems = [
   { name: 'Suppliers', path: '/suppliers', icon: BuildingStorefrontIcon, permission: 'purchases.view' },
   { name: 'Expenses', path: '/expenses', icon: CreditCardIcon, permission: 'expenses.view' },
   { name: 'Customers', path: '/customers', icon: UsersIcon, permission: 'customers.view' },
-  { name: 'Staff Directory', path: '/users', icon: UserGroupIcon, permission: 'users.view' },
-  { name: 'HR & Payroll', path: '/hr', icon: BriefcaseIcon, permission: 'users.view' },
+  { name: 'Staff Directory', path: '/users', icon: UserGroupIcon, permission: 'staff.view' },
+  { name: 'HR & Payroll', path: '/hr', icon: BriefcaseIcon, permission: 'staff.view' },
   { name: 'Reports', path: '/reports', icon: ChartBarIcon, permission: 'reports.view' },
   { name: 'Settings', path: '/settings', icon: CogIcon, permission: 'settings.view' }
 ];
