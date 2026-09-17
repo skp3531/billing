@@ -13,3 +13,24 @@
     --danger: #EF4444;
   }
 }
+
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-root, #print-root * {
+    visibility: visible;
+  }
+  #print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+  }
+  @page {
+    margin: 0;
+  }
+}

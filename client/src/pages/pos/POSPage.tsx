@@ -3,7 +3,7 @@ import { toast } from 'react-hot-toast';
 import { useAuthStore } from '../../store/authStore';
 import { useOfflineSync } from '../../hooks/useOfflineSync';
 import { db } from '../../utils/db';
-import { Category, MenuItem, OrderItemModifier, MenuVariant, OrderType, PaymentMethod } from '../../types';
+import { Order, Category, MenuItem, OrderItemModifier, MenuVariant, OrderType, PaymentMethod } from '../../types';
 import { getCategories } from '../../api/category.api';
 import { getMenuItems } from '../../api/menu.api';
 import { orderApi } from '../../api/order.api';
@@ -15,6 +15,8 @@ import { CartSidebar } from './components/CartSidebar';
 import { CheckoutModal } from './components/CheckoutModal';
 import { CustomerModal } from './components/CustomerModal';
 import { cashRegisterApi, CashRegister } from '../../api/cashRegister.api';
+import { ReceiptTemplate } from '../../components/print/ReceiptTemplate';
+import { printerApi, PrinterSetting } from '../../api/printer.api';
 import { Wallet } from 'lucide-react';
 
 interface CartItem {
@@ -41,6 +43,8 @@ const POSPage = () => {
   const [showOpenModal, setShowOpenModal] = useState(false);
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [cashInput, setCashInput] = useState('');
+  const [printOrder, setPrintOrder] = useState<Order | null>(null);
+  const [printerSettings, setPrinterSettings] = useState<PrinterSetting | null>(null);
   const [isRegisterLoading, setIsRegisterLoading] = useState(true);
 
   const [cart, setCart] = useState<CartItem[]>(() => {
@@ -94,7 +98,8 @@ const POSPage = () => {
   // Keyboard Shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'F2') { e.preventDefault(); setCart([]); toast('New Sale Started'); }
+      if (e.key === 'F2') { e.preventDefault(); setCart([]);
+      setCart([]); toast('New Sale Started'); }
       if (e.key === 'F10') { e.preventDefault(); if(cart.length > 0) setShowCheckout(true); }
       if (e.key === 'F4') { e.preventDefault(); setShowCustomer(true); }
       if (e.key === 'F8') { e.preventDefault(); handleHoldBill(); }
@@ -253,6 +258,7 @@ const POSPage = () => {
 
   return (
     <>
+      <ReceiptTemplate order={printOrder} settings={printerSettings} organizationName="Restaurant" />
     <div className="flex flex-col h-screen w-full bg-gray-50 overflow-hidden font-sans">
       {register && (
         <div className="absolute top-4 right-[26rem] z-50">

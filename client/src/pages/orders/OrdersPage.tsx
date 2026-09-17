@@ -11,6 +11,8 @@ import { OrdersKanbanBoard } from './components/OrdersKanbanBoard';
 import { LayoutDashboard, ListTodo } from 'lucide-react';
 import clsx from 'clsx';
 import { format } from 'date-fns';
+import { ReceiptTemplate } from '../../components/print/ReceiptTemplate';
+import { printerApi, PrinterSetting } from '../../api/printer.api';
 
 const DateSelector = () => {
   const { preset, setPreset, startDate, endDate } = useDateFilter();
@@ -55,6 +57,8 @@ const OrdersContent = () => {
   const [view, setView] = useState<'list' | 'kanban'>('list');
   
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [printOrder, setPrintOrder] = useState<Order | null>(null);
+  const [printerSettings, setPrinterSettings] = useState<PrinterSetting | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   const fetchOrders = async (silent = false) => {
@@ -69,6 +73,18 @@ const OrdersContent = () => {
       if (!silent) setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      if (!currentOutlet) return;
+      try {
+        const data = await printerApi.getSettings(currentOutlet._id);
+        const receiptSetting = data.find(s => s.type === 'RECEIPT');
+        if (receiptSetting) setPrinterSettings(receiptSetting);
+      } catch (err) {}
+    };
+    fetchSettings();
+  }, [currentOutlet]);
 
   useEffect(() => {
     fetchOrders();
