@@ -1,3 +1,4 @@
+import cashRegisterRoutes from './cashRegister.routes';
 import { Router } from 'express';
 import authRoutes from './auth.routes';
 import orgRoutes from './organization.routes';
@@ -47,5 +48,7 @@ router.use('/printers', printerRoutes);
 router.use('/reservations', reservationRoutes);
 router.use('/waitlist', waitlistRoutes);
 router.use('/hr', hrRoutes);
+
+router.use('/cash-registers', cashRegisterRoutes);
 
 export default router;
