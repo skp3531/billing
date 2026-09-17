@@ -113,6 +113,8 @@ export default function SettingsPage() {
       <div className="flex-1 overflow-y-auto p-8">
         {loading ? (
           <div className="text-center p-12 font-bold text-gray-500">Loading Configuration...</div>
+        ) : !data ? (
+          <div className="text-center p-12 font-bold text-rose-500">Error loading configuration. Please refresh.</div>
         ) : (
           <div className="max-w-5xl space-y-8">
             
