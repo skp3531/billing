@@ -43,7 +43,7 @@ import axios from 'axios';
 
 const AuthInit = ({ children }: { children: React.ReactNode }) => {
   const [isInitializing, setIsInitializing] = useState(true);
-  const { setAccessToken, logout } = useAuthStore();
+  const { setAccessToken, setAuth, logout, organization, outlets, currentOutlet } = useAuthStore();
 
   useEffect(() => {
     const initAuth = async () => {
@@ -55,6 +55,19 @@ const AuthInit = ({ children }: { children: React.ReactNode }) => {
         );
         const { accessToken } = res.data.data;
         setAccessToken(accessToken);
+        
+        // Also fetch latest user to heal missing permissions or sync role changes
+        api.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+        const meRes = await api.get('/auth/me');
+        if (meRes.data.data) {
+          setAuth({
+            accessToken,
+            user: meRes.data.data,
+            organization: organization as any,
+            outlets: outlets,
+            currentOutlet: currentOutlet as any
+          });
+        }
       } catch (err) {
         logout();
       } finally {
