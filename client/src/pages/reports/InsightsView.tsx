@@ -19,7 +19,7 @@ const InsightsView = () => {
     const fetchInsights = async () => {
       try {
         setLoading(true);
-        const res = await api.get('/analytics/insights', {
+        const res = await api.get('/analytics/ai-insights', {
           params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
         });
         setInsights(res.data.insights || []);

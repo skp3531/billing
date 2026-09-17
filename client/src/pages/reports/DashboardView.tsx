@@ -14,7 +14,7 @@ const DashboardView = () => {
     const fetchDashboard = async () => {
       try {
         setLoading(true);
-        const res = await api.get('/analytics/dashboard', {
+        const res = await api.get('/analytics/dashboard-kpis', {
           params: { 
             startDate: startDate.toISOString(), 
             endDate: endDate.toISOString() 

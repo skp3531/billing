@@ -14,6 +14,7 @@ router.use(authenticate);
 router.get('/csv/template', requirePermission(PERMISSIONS.MENU_MANAGE), asyncHandler(downloadCsvTemplate));
 router.post('/csv/import', requirePermission(PERMISSIONS.MENU_MANAGE), uploadCSV.single('file'), asyncHandler(importCsv));
 
+router.get('/engineering', requirePermission(PERMISSIONS.MENU_VIEW), asyncHandler(getMenuEngineering));
 router.get('/', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItems));
 router.get('/:id', requirePermission(PERMISSIONS.MENU_VIEW, PERMISSIONS.POS_VIEW), asyncHandler(getMenuItem));
 router.post('/', requirePermission(PERMISSIONS.MENU_MANAGE, PERMISSIONS.MENU_CREATE), asyncHandler(createMenuItem));
