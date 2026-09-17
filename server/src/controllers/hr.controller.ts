@@ -3,6 +3,7 @@ import { Attendance } from '../models/Attendance';
 import { Shift } from '../models/Shift';
 import { LeaveRequest } from '../models/LeaveRequest';
 import { Payslip } from '../models/Payslip';
+import { Order } from '../models/Order';
 import { successResponse, errorResponse } from '../utils/apiResponse';
 
 export const getAttendance = async (req: Request, res: Response) => {
@@ -125,4 +126,106 @@ export const getHRDashboard = async (req: Request, res: Response) => {
     employeesOnLeave: leaves,
     monthlyPayrollEstimate: totalEmployees * 15000 // Placeholder metric
   });
+};
+
+// Payroll
+export const getPayslips = async (req: Request, res: Response) => {
+  const { month, year } = req.query;
+  const match: any = { organizationId: req.user!.organizationId };
+  if (month) match.month = Number(month);
+  if (year) match.year = Number(year);
+  
+  const payslips = await Payslip.find(match).populate('userId', 'name department designation');
+  return successResponse(res, payslips);
+};
+
+export const generatePayroll = async (req: Request, res: Response) => {
+  const { month, year } = req.body;
+  
+  // Find all active employees
+  const employees = await Attendance.db.model('User').find({
+    organizationId: req.user!.organizationId,
+    active: true
+  });
+  
+  const payslips = [];
+  
+  for (const emp of employees) {
+    // Check if payslip already exists
+    const existing = await Payslip.findOne({
+      userId: emp._id, month, year
+    });
+    
+    if (existing) continue;
+    
+    // Base salary details
+    const struct = emp.salaryStructure || {};
+    const basicPay = struct.basic || emp.baseSalary || 0;
+    const hra = struct.hra || 0;
+    const allowances = struct.allowances || 0;
+    const pf = struct.pfDeduction || 0;
+    const esi = struct.esiDeduction || 0;
+    
+    // Dummy calculation for overtime and unpaid leaves based on attendance
+    // In a real app we would aggregate Attendance logs for the given month/year
+    const overtimePay = 0;
+    const unpaidLeaveDeduction = 0;
+    
+    const grossSalary = basicPay + hra + allowances + overtimePay;
+    const netSalary = grossSalary - pf - esi - unpaidLeaveDeduction;
+    
+    const payslip = new Payslip({
+      organizationId: req.user!.organizationId,
+      userId: emp._id,
+      month,
+      year,
+      basicPay,
+      hra,
+      allowances,
+      overtimePay,
+      pfDeduction: pf,
+      esiDeduction: esi,
+      unpaidLeaveDeduction,
+      grossSalary,
+      netSalary,
+      status: 'DRAFT'
+    });
+    
+    await payslip.save();
+    payslips.push(payslip);
+  }
+  
+  return successResponse(res, { generated: payslips.length }, `Generated ${payslips.length} payslips`);
+};
+
+export const updatePayslipStatus = async (req: Request, res: Response) => {
+  const payslip = await Payslip.findOneAndUpdate(
+    { _id: req.params.id, organizationId: req.user!.organizationId },
+    { $set: { status: req.body.status } },
+    { new: true }
+  );
+  if (!payslip) return errorResponse(res, 'Payslip not found', 404);
+  return successResponse(res, payslip, 'Payslip updated');
+};
+
+export const getPerformanceStats = async (req: Request, res: Response) => {
+  const match = { organizationId: req.user!.organizationId, status: 'COMPLETED' };
+  
+  // Group by cashier
+  const cashierStats = await Order.aggregate([
+    { $match: match },
+    { $group: { _id: '$cashierId', totalRevenue: { $sum: '$grandTotal' }, ordersHandled: { $sum: 1 } } },
+    { $lookup: { from: 'users', localField: '_id', foreignField: '_id', as: 'cashier' } },
+    { $unwind: '$cashier' },
+    { $project: { name: '$cashier.name', totalRevenue: 1, ordersHandled: 1 } },
+    { $sort: { totalRevenue: -1 } }
+  ]);
+  
+  // Generate some AI string insights
+  let insights = [];
+  if (cashierStats.length > 0) {
+    insights.push(`Cashier ${cashierStats[0].name} generated the highest revenue (₹${cashierStats[0].totalRevenue.toFixed(2)}).`);
+  }
+  
+  return successResponse(res, { cashierStats, insights });
 };

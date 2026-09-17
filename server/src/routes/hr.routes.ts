@@ -3,7 +3,7 @@ import {
   getAttendance, clockIn, clockOut,
   getLeaves, applyLeave, updateLeaveStatus,
   getHRDashboard
-} from '../controllers/hr.controller';
+, getPayslips, generatePayroll, updatePayslipStatus, getPerformanceStats } from '../controllers/hr.controller';
 import { authenticate } from '../middleware/authenticate';
 
 const router = Router();
@@ -20,3 +20,9 @@ router.post('/leaves', applyLeave);
 router.patch('/leaves/:id/status', updateLeaveStatus);
 
 export default router;
+
+router.get('/payroll', getPayslips);
+router.post('/payroll/generate', generatePayroll);
+router.patch('/payroll/:id/status', updatePayslipStatus);
+
+router.get('/performance', getPerformanceStats);

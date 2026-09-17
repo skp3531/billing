@@ -34,6 +34,8 @@ export interface IOrder extends Document {
   timeline?: { status: string; timestamp: Date; by?: string; note?: string }[];
   cashierId?: mongoose.Types.ObjectId;
   cashierName?: string;
+  waiterId?: mongoose.Types.ObjectId;
+  waiterName?: string;
   organizationId: mongoose.Types.ObjectId;
   outletId: mongoose.Types.ObjectId;
   orderNumber: string;
@@ -136,6 +138,8 @@ const orderSchema = new Schema<IOrder>(
     timeline: [{ status: String, timestamp: { type: Date, default: Date.now }, by: String, note: String }],
     cashierId: { type: Schema.Types.ObjectId, ref: 'User' },
     cashierName: { type: String },
+    waiterId: { type: Schema.Types.ObjectId, ref: 'User' },
+    waiterName: { type: String },
   },
   {
     timestamps: true,
