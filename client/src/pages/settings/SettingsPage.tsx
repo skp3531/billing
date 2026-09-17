@@ -1,3 +1,6 @@
+import OrganizationTab from './OrganizationTab';
+import PrinterSettingsTab from './PrinterSettingsTab';
+import { useNavigate } from 'react-router-dom';
 import IntegrationsTab from './IntegrationsTab';
 import SystemTab from './SystemTab';
 import LegalTab from './LegalTab';
@@ -10,6 +13,7 @@ import BillingTab from './BillingTab';
 import OperationsTab from './OperationsTab';
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -91,7 +95,11 @@ export default function SettingsPage() {
                 {group.items.map(item => (
                   <button
                     key={item.id}
-                    onClick={() => setActiveTab(item.id)}
+                    onClick={() => {
+    if (item.id === 'outlets') navigate('/settings/outlets');
+    else if (item.id === 'users') navigate('/settings/roles');
+    else setActiveTab(item.id);
+  }}
                     className={clsx(
                       "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all",
                       activeTab === item.id 
@@ -183,8 +191,10 @@ export default function SettingsPage() {
             {activeTab === 'legal' && <LegalTab org={data.org} onUpdate={fetchData} />}
             {activeTab === 'integrations' && <IntegrationsTab org={data.org} onUpdate={fetchData} />}
             {activeTab === 'system' && <SystemTab org={data.org} onUpdate={fetchData} />}
+   {activeTab === 'printing' && <PrinterSettingsTab />}
+   {activeTab === 'organization' && <OrganizationTab org={data.org} onUpdate={fetchData} />}
 
-            {activeTab !== 'dashboard' && activeTab !== 'billing' && activeTab !== 'modules' && activeTab !== 'legal' && activeTab !== 'integrations' && activeTab !== 'system' && (
+            {activeTab !== 'dashboard' && activeTab !== 'billing' && activeTab !== 'modules' && activeTab !== 'legal' && activeTab !== 'integrations' && activeTab !== 'system' && activeTab !== 'printing' && activeTab !== 'organization' && (
               <div className="bg-white border-2 border-dashed border-gray-200 rounded-2xl p-16 text-center">
                 <Settings className="w-12 h-12 text-gray-300 mx-auto mb-4" />
                 <h2 className="text-xl font-black text-gray-900">Module Configuration</h2>

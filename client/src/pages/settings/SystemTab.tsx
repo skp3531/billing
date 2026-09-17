@@ -10,7 +10,7 @@ export default function SystemTab({ org, onUpdate }: any) {
     try {
       setBackingUp(true);
       // Simulate backup hitting the API
-      await api.put('/organization/me', { lastBackupDate: new Date() });
+      await api.put('/organizations/me', { lastBackupDate: new Date() });
       toast.success('Database backup completed successfully');
       onUpdate();
     } catch {
