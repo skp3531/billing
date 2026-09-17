@@ -1,110 +1,99 @@
 import React, { useEffect, useState } from 'react';
-import { useDateFilter } from '../../contexts/DateFilterContext';
+import { useOutletContext } from 'react-router-dom';
+import { PieChart as PieChartIcon, Info } from 'lucide-react';
+import { ScatterChart, Scatter, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, ZAxis } from 'recharts';
 import api from '../../api/axios';
-import { toast } from 'react-hot-toast';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const ProductsView = () => {
-  const { startDate, endDate } = useDateFilter();
+export default function ProductsView() {
+  const { dateRange } = useOutletContext<any>();
+  const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
 
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get('/analytics/products', {
-          params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
-        });
-        setData(res.data);
-      } catch (err) {
-        toast.error('Failed to load product analytics');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProducts();
-  }, [startDate, endDate]);
+    fetchData();
+  }, [dateRange]);
 
-  if (loading) return <div className="animate-pulse h-96 bg-gray-200 rounded-xl"></div>;
-  if (!data) return null;
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const res = await api.get('/analytics/menu-engineering');
+      setData(res.data.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) return <div className="text-center p-12 font-bold text-gray-500 animate-pulse">Loading Menu Intelligence...</div>;
+
+  const avgVol = data.reduce((acc, curr) => acc + curr.volume, 0) / (data.length || 1);
+  const avgMargin = data.reduce((acc, curr) => acc + curr.margin, 0) / (data.length || 1);
+
+  const CustomTooltip = ({ active, payload }: any) => {
+    if (active && payload && payload.length) {
+      const d = payload[0].payload;
+      return (
+        <div className="bg-[#0B1220] p-4 rounded-xl border border-gray-700 shadow-xl text-white">
+          <p className="font-black text-sm mb-2">{d.name}</p>
+          <p className="text-xs text-gray-400">Category: <span className="text-gray-200 font-bold">{d.category}</span></p>
+          <p className="text-xs text-gray-400">Margin: <span className="text-emerald-400 font-bold">₹{d.margin.toFixed(2)}</span></p>
+          <p className="text-xs text-gray-400">Volume: <span className="text-amber-400 font-bold">{d.volume} sold</span></p>
+          <div className="mt-2 pt-2 border-t border-gray-700">
+            <span className={`text-[10px] font-black px-2 py-1 rounded-full ${
+              d.quadrant === 'STAR' ? 'bg-amber-500/20 text-amber-400' :
+              d.quadrant === 'CASH_COW' ? 'bg-emerald-500/20 text-emerald-400' :
+              d.quadrant === 'QUESTION_MARK' ? 'bg-blue-500/20 text-blue-400' :
+              'bg-rose-500/20 text-rose-400'
+            }`}>
+              {d.quadrant.replace('_', ' ')}
+            </span>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
-    <div className="space-y-6">
-      
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-6">Top 10 Best Selling Items (Revenue)</h2>
-        <div className="h-80 w-full">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      <div>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+          <PieChartIcon className="w-8 h-8 text-amber-500" /> Menu Engineering
+        </h1>
+        <p className="text-gray-500 font-bold mt-1 text-sm">Automatically classify items into Stars, Cash Cows, Dogs, and Question Marks</p>
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-start gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200 mb-8">
+          <Info className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />
+          <p className="text-sm text-gray-600 font-medium">
+            This quadrant plots <strong className="text-gray-900">Profit Margin (Y-Axis)</strong> vs <strong className="text-gray-900">Sales Volume (X-Axis)</strong>. 
+            Items in the top-right are your <span className="text-amber-500 font-bold">Stars</span> (High Profit, High Volume). 
+            Items in the bottom-left are <span className="text-rose-500 font-bold">Dogs</span> (Low Profit, Low Volume).
+          </p>
+        </div>
+
+        <div className="h-[600px] w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={data.topItems} layout="vertical" margin={{ left: 50 }}>
-              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f3f4f6" />
-              <XAxis type="number" tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-              <YAxis dataKey="name" type="category" tick={{fontSize: 12, fill: '#111827'}} width={100} axisLine={false} tickLine={false} />
-              <Tooltip 
-                formatter={(value: any, name: any) => [
-                  name === 'revenue' ? `₹${value.toFixed(2)}` : value, 
-                  name.charAt(0).toUpperCase() + name.slice(1)
-                ]}
-                cursor={{fill: '#f3f4f6'}}
-              />
-              <Bar dataKey="revenue" fill="#10b981" radius={[0, 4, 4, 0]} barSize={24} />
-            </BarChart>
+            <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+              <XAxis type="number" dataKey="volume" name="Sales Volume" label={{ value: 'Sales Volume →', position: 'bottom', fontWeight: 'bold', fill: '#9ca3af' }} />
+              <YAxis type="number" dataKey="margin" name="Profit Margin" label={{ value: 'Profit Margin (₹) →', angle: -90, position: 'left', fontWeight: 'bold', fill: '#9ca3af' }} />
+              <ZAxis type="number" range={[100, 400]} />
+              <Tooltip content={<CustomTooltip />} cursor={{ strokeDasharray: '3 3' }} />
+              
+              <ReferenceLine x={avgVol} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'top', value: 'Avg Volume', fill: '#94a3b8', fontSize: 12, fontWeight: 'bold' }} />
+              <ReferenceLine y={avgMargin} stroke="#94a3b8" strokeDasharray="3 3" label={{ position: 'right', value: 'Avg Margin', fill: '#94a3b8', fontSize: 12, fontWeight: 'bold' }} />
+              
+              <Scatter name="Stars" data={data.filter(d => d.quadrant === 'STAR')} fill="#F59E0B" />
+              <Scatter name="Cash Cows" data={data.filter(d => d.quadrant === 'CASH_COW')} fill="#10B981" />
+              <Scatter name="Question Marks" data={data.filter(d => d.quadrant === 'QUESTION_MARK')} fill="#3B82F6" />
+              <Scatter name="Dogs" data={data.filter(d => d.quadrant === 'DOG')} fill="#F43F5E" />
+            </ScatterChart>
           </ResponsiveContainer>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-hidden">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Category Performance</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 rounded-l-lg">Category</th>
-                  <th className="px-4 py-3 text-right">Items Sold</th>
-                  <th className="px-4 py-3 text-right rounded-r-lg">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.categoryBreakdown.map((cat: any) => (
-                  <tr key={cat._id} className="bg-white border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{cat.name || 'Uncategorized'}</td>
-                    <td className="px-4 py-3 text-right">{cat.quantity}</td>
-                    <td className="px-4 py-3 text-right font-medium text-emerald-600">₹{cat.revenue.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 overflow-hidden">
-          <h2 className="text-lg font-bold text-gray-900 mb-4">Bottom 5 Selling Items</h2>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left text-gray-500">
-              <thead className="text-xs text-gray-700 uppercase bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 rounded-l-lg">Item</th>
-                  <th className="px-4 py-3 text-right">Quantity</th>
-                  <th className="px-4 py-3 text-right rounded-r-lg">Revenue</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.worstItems.map((item: any) => (
-                  <tr key={item._id} className="bg-white border-b hover:bg-gray-50">
-                    <td className="px-4 py-3 font-medium text-gray-900">{item.name}</td>
-                    <td className="px-4 py-3 text-right">{item.quantity}</td>
-                    <td className="px-4 py-3 text-right text-rose-600">₹{item.revenue.toFixed(2)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
     </div>
   );
-};
-
-export default ProductsView;
+}

@@ -9,15 +9,17 @@ import {
   getGSTReport, 
   getAIInsights 
 } from '../controllers/analytics.controller';
+import { getMenuEngineering, getBusinessHealth } from '../controllers/advancedAnalytics.controller';
 import { authenticate } from '../middleware/authenticate';
-import { requirePermission } from '../middleware/authorize';
-import { PERMISSIONS } from '../utils/permissions'; // Might need this if restricted
 
 const router = Router();
 
 router.use(authenticate);
 
 router.get('/dashboard-kpis', getDashboardKPIs);
+router.get('/health', getBusinessHealth);
+router.get('/menu-engineering', getMenuEngineering);
+
 router.get('/command-center', getCommandCenterData);
 router.get('/sales', getSalesAnalytics);
 router.get('/products', getProductAnalytics);

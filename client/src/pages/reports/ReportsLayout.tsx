@@ -1,105 +1,121 @@
-import React from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
-import { DateFilterProvider, useDateFilter, DateRangePreset } from '../../contexts/DateFilterContext';
+import React, { useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { 
-  LayoutDashboard, TrendingUp, Package, Users, CreditCard, 
-  Archive, ShoppingCart, UserCheck, Receipt, Tag, ArrowDownRight, 
-  Banknote, Truck, Activity, Sparkles
+  BarChart3, PieChart, Users, Package, 
+  TrendingUp, Activity, FileText, Calendar, Wallet, Layers, ShieldCheck
 } from 'lucide-react';
 import clsx from 'clsx';
-import { format } from 'date-fns';
 
-const reportNavItems = [
-  { name: 'Dashboard', path: '/reports/dashboard', icon: LayoutDashboard },
-  { name: 'Sales Analytics', path: '/reports/sales', icon: TrendingUp },
-  { name: 'Product Analytics', path: '/reports/products', icon: Package },
-  { name: 'Customer Analytics', path: '/reports/customers', icon: Users },
-  { name: 'Cash Register', path: '/reports/cash', icon: Banknote },
-  { name: 'Inventory Consumption', path: '/reports/inventory', icon: Archive },
-  { name: 'Profit & Loss', path: '/reports/pnl', icon: Activity },
-  { name: 'Tax & GST Reports', path: '/reports/gst', icon: Receipt },
-  { name: 'AI Insights', path: '/reports/insights', icon: Sparkles },
-];
-
-const DateSelector = () => {
-  const { preset, setPreset, startDate, endDate } = useDateFilter();
-
-  const presets: { label: string; value: DateRangePreset }[] = [
-    { label: 'Today', value: 'today' },
-    { label: 'Yesterday', value: 'yesterday' },
-    { label: 'Last 7 Days', value: 'last_7_days' },
-    { label: 'This Month', value: 'this_month' },
-    { label: 'This Year', value: 'this_year' },
+export default function ReportsLayout() {
+  const [dateRange, setDateRange] = useState('TODAY');
+  
+  const menuGroups = [
+    {
+      title: 'Executive',
+      items: [
+        { id: 'dashboard', label: 'CEO Dashboard', path: '/reports/dashboard', icon: Activity },
+        { id: 'sales', label: 'Sales Command Center', path: '/reports/sales', icon: TrendingUp },
+      ]
+    },
+    {
+      title: 'Menu & Inventory',
+      items: [
+        { id: 'menu', label: 'Menu Engineering', path: '/reports/products', icon: PieChart },
+        { id: 'inventory', label: 'Food Cost & Supply', path: '/reports/inventory', icon: Package },
+      ]
+    },
+    {
+      title: 'Customers & Loyalty',
+      items: [
+        { id: 'customers', label: 'Customer Intelligence', path: '/reports/customers', icon: Users },
+      ]
+    },
+    {
+      title: 'Operations & Finance',
+      items: [
+        { id: 'pnl', label: 'Profitability (PNL)', path: '/reports/pnl', icon: Wallet },
+        { id: 'cash', label: 'Cash Register Analytics', path: '/reports/cash', icon: Layers },
+      ]
+    },
+    {
+      title: 'Compliance',
+      items: [
+        { id: 'gst', label: 'GST Control Center', path: '/reports/gst', icon: ShieldCheck },
+      ]
+    }
   ];
 
   return (
-    <div className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-6">
-      <div className="flex space-x-2 overflow-x-auto w-full pb-1 sm:pb-0 hide-scrollbar">
-        {presets.map((p) => (
-          <button
-            key={p.value}
-            onClick={() => setPreset(p.value)}
-            className={clsx(
-              "px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors",
-              preset === p.value 
-                ? "bg-amber-600 text-white shadow-sm" 
-                : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-      <div className="text-sm text-gray-500 font-medium whitespace-nowrap px-4 border-l border-gray-200">
-        {format(startDate, 'MMM d, yyyy')} - {format(endDate, 'MMM d, yyyy')}
-      </div>
-    </div>
-  );
-};
-
-const ReportsLayoutInner = () => {
-  return (
-    <div className="flex h-[calc(100vh-4rem)] bg-gray-50">
-      {/* Reports Sidebar */}
-      <div className="w-64 bg-white border-r border-gray-200 overflow-y-auto hidden md:block shrink-0">
-        <div className="p-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-900">Analytics</h2>
-          <p className="text-xs text-gray-500">Business Intelligence</p>
+    <div className="flex h-[calc(100vh-4rem)] bg-slate-50">
+      
+      {/* Dark Premium Sidebar */}
+      <div className="w-72 bg-[#0B1220] border-r border-[#1e293b] overflow-y-auto text-slate-300">
+        <div className="p-6 pb-4 border-b border-[#1e293b]">
+          <h2 className="text-xl font-black text-amber-500 flex items-center gap-2">
+            <BarChart3 className="w-6 h-6" /> BI Center
+          </h2>
+          <p className="text-xs font-bold text-slate-500 mt-1">Enterprise Analytics Engine</p>
         </div>
-        <nav className="p-2 space-y-1">
-          {reportNavItems.map((item) => (
-            <NavLink
-              key={item.name}
-              to={item.path}
-              className={({ isActive }) => clsx(
-                "flex items-center px-3 py-2.5 rounded-lg text-sm font-medium transition-colors",
-                isActive 
-                  ? "bg-amber-50 text-amber-700" 
-                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-              )}
-            >
-              <item.icon className={clsx("w-5 h-5 mr-3 flex-shrink-0", "text-amber-500")} />
-              <span className="truncate">{item.name}</span>
-            </NavLink>
+
+        <div className="p-4 space-y-6">
+          {menuGroups.map((group, idx) => (
+            <div key={idx}>
+              <h3 className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2 px-3">{group.title}</h3>
+              <div className="space-y-1">
+                {group.items.map(item => (
+                  <NavLink
+                    key={item.id}
+                    to={item.path}
+                    className={({ isActive }) => clsx(
+                      "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-all",
+                      isActive 
+                        ? "bg-amber-500/10 text-amber-500" 
+                        : "text-slate-400 hover:bg-slate-800 hover:text-slate-200"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4 shrink-0" />
+                    {item.label}
+                  </NavLink>
+                ))}
+              </div>
+            </div>
           ))}
-        </nav>
+        </div>
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
-        <DateSelector />
-        <Outlet />
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-slate-50">
+        
+        {/* Sticky Filter Bar */}
+        <div className="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between shrink-0 z-10 shadow-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-5 h-5 text-gray-400" />
+            <span className="font-bold text-gray-700 text-sm">Date Range:</span>
+          </div>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            {['TODAY', 'YESTERDAY', 'LAST_7_DAYS', 'THIS_MONTH'].map(range => (
+              <button
+                key={range}
+                onClick={() => setDateRange(range)}
+                className={clsx(
+                  "px-4 py-1.5 rounded-md text-xs font-bold transition-all",
+                  dateRange === range 
+                    ? "bg-white text-gray-900 shadow-sm" 
+                    : "text-gray-500 hover:text-gray-700"
+                )}
+              >
+                {range.replace(/_/g, ' ')}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Dashboard Views */}
+        <div className="flex-1 overflow-y-auto p-8 relative">
+          <Outlet context={{ dateRange }} />
+        </div>
+        
       </div>
     </div>
   );
-};
-
-export const ReportsLayout = () => {
-  return (
-    <DateFilterProvider>
-      <ReportsLayoutInner />
-    </DateFilterProvider>
-  );
-};
-
-export default ReportsLayout;
+}

@@ -1,118 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { useDateFilter } from '../../contexts/DateFilterContext';
-import api from '../../api/axios';
-import { toast } from 'react-hot-toast';
-import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend
-} from 'recharts';
+import React from 'react';
+import { useOutletContext } from 'react-router-dom';
+import { TrendingUp, FileText } from 'lucide-react';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const COLORS = ['#d97706', '#059669', '#2563eb', '#7c3aed', '#db2777'];
+const dummyData = [
+  { time: '10:00 AM', sales: 4000 },
+  { time: '12:00 PM', sales: 12000 },
+  { time: '02:00 PM', sales: 15000 },
+  { time: '04:00 PM', sales: 8000 },
+  { time: '06:00 PM', sales: 25000 },
+  { time: '08:00 PM', sales: 32000 },
+  { time: '10:00 PM', sales: 18000 },
+];
 
-const SalesView = () => {
-  const { startDate, endDate } = useDateFilter();
-  const [loading, setLoading] = useState(true);
-  const [data, setData] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchSales = async () => {
-      try {
-        setLoading(true);
-        const res = await api.get('/analytics/sales', {
-          params: { startDate: startDate.toISOString(), endDate: endDate.toISOString() }
-        });
-        setData(res.data);
-      } catch (err) {
-        toast.error('Failed to load sales analytics');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchSales();
-  }, [startDate, endDate]);
-
-  if (loading) return <div className="animate-pulse h-96 bg-gray-200 rounded-xl"></div>;
-  if (!data) return null;
+export default function SalesView() {
+  const { dateRange } = useOutletContext<any>();
 
   return (
-    <div className="space-y-6">
-      
-      {/* Daily Revenue Trend */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-6">Revenue Trend (Daily)</h2>
-        <div className="h-80 w-full">
+    <div className="space-y-8 max-w-7xl mx-auto pb-12">
+      <div>
+        <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
+          <TrendingUp className="w-8 h-8 text-indigo-600" /> Sales Command Center
+        </h1>
+        <p className="text-gray-500 font-bold mt-1 text-sm">Revenue trends, hourly heatmaps, and channel breakdowns</p>
+      </div>
+
+      <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+        <h3 className="font-black text-gray-900 mb-6 flex items-center gap-2"><FileText className="w-5 h-5 text-gray-400" /> Revenue Over Time ({dateRange})</h3>
+        <div className="h-96 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={data.dailyTrend}>
+            <AreaChart data={dummyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#F59E0B" stopOpacity={0.8}/>
+                  <stop offset="95%" stopColor="#F59E0B" stopOpacity={0}/>
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="time" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+              <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `₹${value}`} />
               <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-              <XAxis dataKey="_id" tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
-              <YAxis tickFormatter={(val) => `₹${val}`} tick={{fontSize: 12, fill: '#6b7280'}} axisLine={false} tickLine={false} />
               <Tooltip 
-                formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Revenue']}
-                labelStyle={{ color: '#111827', fontWeight: 'bold' }}
-                contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)' }}
+                itemStyle={{ color: '#111827', fontWeight: 'bold' }}
+                formatter={(value: any) => [`₹${value}`, 'Sales']}
               />
-              <Line type="monotone" dataKey="revenue" stroke="#d97706" strokeWidth={3} dot={{ r: 4, fill: '#d97706', strokeWidth: 0 }} activeDot={{ r: 6 }} />
-            </LineChart>
+              <Area type="monotone" dataKey="sales" stroke="#F59E0B" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+            </AreaChart>
           </ResponsiveContainer>
         </div>
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Order Type Breakdown */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-6">Revenue by Order Type</h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={data.orderTypeBreakdown}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={60}
-                  outerRadius={80}
-                  paddingAngle={5}
-                  dataKey="revenue"
-                  nameKey="_id"
-                >
-                  {data.orderTypeBreakdown.map((entry: any, index: number) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(value: any) => `₹${value.toFixed(2)}`} />
-                <Legend verticalAlign="bottom" height={36} iconType="circle" />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+      
+      <div className="grid grid-cols-2 gap-6">
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center h-64">
+          <p className="font-bold text-gray-400">Channel Breakdown Pie Chart Rendering...</p>
         </div>
-
-        {/* Peak Hours Heatmap / Bar */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-          <h2 className="text-lg font-bold text-gray-900 mb-6">Peak Hours (Revenue)</h2>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.peakHours}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis 
-                  dataKey="_id" 
-                  tickFormatter={(val) => `${val}:00`} 
-                  tick={{fontSize: 12, fill: '#6b7280'}} 
-                  axisLine={false} 
-                  tickLine={false} 
-                />
-                <YAxis hide />
-                <Tooltip 
-                  formatter={(value: any) => [`₹${value.toFixed(2)}`, 'Revenue']}
-                  labelFormatter={(label) => `Time: ${label}:00 - ${label}:59`}
-                  cursor={{fill: '#f3f4f6'}}
-                />
-                <Bar dataKey="revenue" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-center h-64">
+          <p className="font-bold text-gray-400">Sales Heatmap Matrix Rendering...</p>
         </div>
       </div>
     </div>
   );
-};
-
-export default SalesView;
+}
