@@ -3,6 +3,7 @@ import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
+import ErrorBoundary from '../ErrorBoundary';
 
 const AppLayout = () => {
   const location = useLocation();
@@ -14,7 +15,7 @@ const AppLayout = () => {
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         <TopBar />
         <main className={`flex-1 min-w-0 ${isPOS ? 'p-0 overflow-hidden flex flex-col' : 'p-3 sm:p-6 overflow-y-auto'}`}>
-          <Outlet />
+          <ErrorBoundary><Outlet /></ErrorBoundary>
         </main>
       </div>
       <BottomNav />

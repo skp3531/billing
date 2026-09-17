@@ -130,7 +130,7 @@ export default function SettingsPage() {
                   <KPICard title="Active Users" value={data.kpis.activeUsers} subtitle="Staff across all outlets" icon={Users} colorClass="bg-indigo-50 text-indigo-600" />
                   <KPICard title="API Integrations" value={data.kpis.activeIntegrations} subtitle="Zomato, Swiggy, Razorpay" icon={Key} colorClass="bg-amber-50 text-amber-600" />
                   <KPICard title="Tax Profiles" value={data.kpis.activeTaxProfiles} subtitle="Active GST Brackets mapped" icon={BadgeIndianRupee} colorClass="bg-rose-50 text-rose-600" />
-                  <KPICard title="Subscription" value={data.org.subscriptionPlan.replace('_', ' ')} subtitle={data.org.subscriptionExpiry ? `Expires: ${new Date(data.org.subscriptionExpiry).toLocaleDateString()}` : "Active"} icon={CheckCircle} colorClass="bg-emerald-50 text-emerald-600" />
+                  <KPICard title="Subscription" value={(data.org.subscriptionPlan || 'PRO_YEARLY').replace('_', ' ')} subtitle={data.org.subscriptionExpiry ? `Expires: ${new Date(data.org.subscriptionExpiry).toLocaleDateString()}` : "Active"} icon={CheckCircle} colorClass="bg-emerald-50 text-emerald-600" />
                   <KPICard title="System Backup" value={data.org.lastBackupDate ? new Date(data.org.lastBackupDate).toLocaleDateString() : 'Never'} subtitle="Last successful sync" icon={Server} colorClass="bg-gray-100 text-gray-700" />
                 </div>
 
